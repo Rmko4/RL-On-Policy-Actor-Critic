@@ -1,0 +1,10 @@
+numpy
+scikit-image
+gymnasium
+opencv-python
+torch
+pytorch-lightning
+wandb
+moviepy
+imageio
+matplotlib
