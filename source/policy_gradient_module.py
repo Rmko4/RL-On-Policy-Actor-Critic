@@ -1,13 +1,12 @@
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
+import gymnasium as gym
 import torch
+from policy_network import DummyPolicyNetwork
 from pytorch_lightning import LightningModule
 from torch import Tensor, nn
 from torch.optim import SGD, Adam, Optimizer, RMSprop
 from torch.utils.data import DataLoader
-
-import gymnasium as gym
-
 
 OPTIMIZERS = {'Adam': Adam,
               'RMSprop': RMSprop,
@@ -30,12 +29,19 @@ class PolicyGradientModule(LightningModule):
         # Does frame inspection to find parameters
         self.save_hyperparameters()
 
-        self.env = gym.vector.make(env_id, num_envs=num_envs, asynchronous=True)
-        pass
+        self.env = gym.vector.make(
+            env_id, num_envs=num_envs, asynchronous=True)
+        self.policy_network = DummyPolicyNetwork()
 
     # TODO: Typing
 
     def training_step(self, batch, batch_idx: int) -> Tensor:
+        # Retrieve everything from rollout buffer
+        pass
+
+    def on_train_start(self) -> None:
+        # Do one rollout collection run before starting
+        # Can also omit.
         pass
 
     def on_train_epoch_end(self) -> None:
@@ -48,4 +54,5 @@ class PolicyGradientModule(LightningModule):
         pass
 
     def configure_optimizers(self) -> Optimizer:
-        pass
+        return OPTIMIZERS[self.hparams.optimizer](self.policy_network.parameters(),  # type: ignore
+                                                  lr=self.hparams.learning_rate)  # type: ignore
