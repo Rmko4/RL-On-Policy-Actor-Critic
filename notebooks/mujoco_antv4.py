@@ -16,7 +16,7 @@ obs = env.reset()
 # Run a few episodes
 for episode in range(5):
     done = truncated = False
-    total_reward = 0
+    total_reward = 0.
 
     obs = env.reset()
 
@@ -29,7 +29,7 @@ for episode in range(5):
         obs, reward, done, truncated, info = env.step(action)
 
         # Update the total reward
-        total_reward += reward
+        total_reward += float(reward)
 
         if done or truncated:
             break
