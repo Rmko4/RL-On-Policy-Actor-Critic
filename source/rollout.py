@@ -5,7 +5,10 @@ from collections.abc import Iterator
 from typing import List, NamedTuple, Tuple
 
 import numpy as np
+from torch.distributions import Distribution
+import torch
 from gymnasium.vector import VectorEnv
+from policy_network import ActorCriticPolicy
 from torch import Tensor, nn
 from torch.utils.data import IterableDataset
 
@@ -29,37 +32,54 @@ class RolloutBuffer():
     def __getitem__(self, index: int) -> RolloutSample:
         pass
 
-    def collect(self) -> None:
+    def add(self, *items) -> None:
         pass
 
     def reset(self):
         pass
 
-    @property
-    def size(self) -> int:
-        return 1
-
 
 class RolloutAgent():
     def __init__(self,
                  env: VectorEnv,
-                 policy_network: nn.Module,
+                 policy: ActorCriticPolicy,
                  num_rollout_steps: int = 5) -> None:
         self.env = env
-        self.policy_network = policy_network
+        self.policy = policy
         self.num_rollout_steps = num_rollout_steps
 
         self.rollout_buffer = RolloutBuffer(num_rollout_steps, env.num_envs)
-        
+
+    def prepare(self) -> None:
+        self.last_state = self.env.reset()
 
     def perform_rollout(self) -> None:
         buffer = self.rollout_buffer
         buffer.reset()
 
-        for step in range(self.num_rollout_steps):
-            pass
+        self.policy.train(False)
 
-        pass
+        for step in range(self.num_rollout_steps):
+            # Gradient is not computed for rollout,
+            # this will all be done in training_step in one go.
+            with torch.no_grad():
+                action_dist, value, log_prob = self.policy(self.last_state)
+                action_dist: Distribution
+                log_prob: Tensor
+
+                action = action_dist.sample()
+
+                next_state, reward, terminated, truncated, info = \
+                    self.env.step(action)
+
+                done = terminated or truncated
+
+                buffer.add(self.last_state, action, reward, value, log_prob,
+                            done)
+                
+                self.last_state = next_state
+
+        self.policy.train(True)
 
 
 class RolloutBufferDataset(IterableDataset):
@@ -78,22 +98,5 @@ class RolloutBufferDataset(IterableDataset):
         for epoch_step in range(self.max_steps):
             self.rollout_agent.perform_rollout()
 
-
             for i in range(self.rollout_buffer.size):
                 yield self.rollout_buffer[i]
-
-
-# def main():
-#     from torch.utils.data import DataLoader
-#     buffer = UniformReplayBuffer(10)
-#     for i in range(10):
-#         buffer.append(Trajectory(i, i, i, i, False))
-#     dataset = RolloutBufferDataset(buffer)
-#     dataloader = DataLoader(dataset, batch_size=2)
-#     for batch in dataloader:
-#         print(batch)
-#         break
-
-
-# if __name__ == "__main__":
-#     main()

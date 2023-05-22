@@ -4,7 +4,6 @@ import torch
 from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
-
 class ActorCriticPolicy(nn.Module):
     def __init__(self, state_size: int,
                  n_actions: int,
@@ -57,7 +56,7 @@ class ActorCriticPolicy(nn.Module):
     def forward(self, x: Tensor) -> Tuple[Distribution, Tensor]:
         features = self.feature_extractor(x)
 
-        values = self.critic_head(features)
+        value = self.critic_head(features)
         mu = self.actor_head(features)
         std = self.log_std.exp().expand_as(mu)
 
@@ -65,4 +64,4 @@ class ActorCriticPolicy(nn.Module):
         # actions = distribution.sample()
         # log_prob = distribution.log_prob(actions)
 
-        return action_distribution, values
+        return action_distribution, value

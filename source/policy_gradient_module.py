@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, Optional, Type
 
 import gymnasium as gym
 import torch
-from policy_network import DummyPolicyNetwork, ActorCriticPolicy
+from policy_network import ActorCriticPolicy
 from pytorch_lightning import LightningModule
 from rollout import RolloutAgent, RolloutBuffer, RolloutBufferDataset
 from torch import Tensor, nn
@@ -37,11 +37,11 @@ class PolicyGradientModule(LightningModule):
         self.state_size = self.env.observation_space.shape[-1] # type: ignore
         self.n_actions = self.env.action_space.shape[-1] # type: ignore
 
-        self.policy_network = ActorCriticPolicy(
+        self.policy = ActorCriticPolicy(
             state_size=self.state_size, n_actions=self.n_actions, hidden_size=128)
 
         self.rollout_agent = RolloutAgent(self.env,
-                                          self.policy_network,
+                                          self.policy,
                                           num_rollout_steps=num_rollout_steps)
 
         self.batch_size = num_envs * num_rollout_steps
@@ -53,9 +53,7 @@ class PolicyGradientModule(LightningModule):
         pass
 
     def on_train_start(self) -> None:
-        # Do one rollout collection run before starting
-        # Can also omit.
-        pass
+        self.rollout_agent.prepare()
 
     def on_train_epoch_end(self) -> None:
         self.test_epoch()
@@ -70,5 +68,5 @@ class PolicyGradientModule(LightningModule):
         return DataLoader(self.dataset, batch_size=self.batch_size)
 
     def configure_optimizers(self) -> Optimizer:
-        return OPTIMIZERS[self.hparams.optimizer](self.policy_network.parameters(),  # type: ignore
+        return OPTIMIZERS[self.hparams.optimizer](self.policy.parameters(),  # type: ignore
                                                   lr=self.hparams.learning_rate)  # type: ignore

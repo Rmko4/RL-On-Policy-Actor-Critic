@@ -133,3 +133,4 @@ dmypy.json
 logs/**
 videos/**
 # results/**
+lightning_logs/**
