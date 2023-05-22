@@ -1,14 +1,16 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional, Type
 
 import gymnasium as gym
 import torch
-from policy_network import DummyPolicyNetwork
+from policy_network import DummyPolicyNetwork, ActorCriticPolicy
 from pytorch_lightning import LightningModule
+from rollout import RolloutAgent, RolloutBuffer, RolloutBufferDataset
 from torch import Tensor, nn
 from torch.optim import SGD, Adam, Optimizer, RMSprop
 from torch.utils.data import DataLoader
 
-OPTIMIZERS = {'Adam': Adam,
+
+OPTIMIZERS: Dict[str, Type[torch.optim.Optimizer]] = {'Adam': Adam,
               'RMSprop': RMSprop,
               'SGD': SGD}
 
@@ -31,7 +33,18 @@ class PolicyGradientModule(LightningModule):
 
         self.env = gym.vector.make(
             env_id, num_envs=num_envs, asynchronous=True)
-        self.policy_network = DummyPolicyNetwork()
+
+        self.state_size = self.env.observation_space.shape[-1] # type: ignore
+        self.n_actions = self.env.action_space.shape[-1] # type: ignore
+
+        self.policy_network = ActorCriticPolicy(
+            state_size=self.state_size, n_actions=self.n_actions, hidden_size=128)
+
+        self.rollout_agent = RolloutAgent(self.env,
+                                          self.policy_network,
+                                          num_rollout_steps=num_rollout_steps)
+
+        self.batch_size = num_envs * num_rollout_steps
 
     # TODO: Typing
 
@@ -51,7 +64,10 @@ class PolicyGradientModule(LightningModule):
         pass
 
     def train_dataloader(self) -> DataLoader:
-        pass
+        self.dataset = RolloutBufferDataset(
+            self.rollout_agent,
+            max_steps=self.hparams.steps_per_epoch)  # type: ignore
+        return DataLoader(self.dataset, batch_size=self.batch_size)
 
     def configure_optimizers(self) -> Optimizer:
         return OPTIMIZERS[self.hparams.optimizer](self.policy_network.parameters(),  # type: ignore

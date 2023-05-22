@@ -14,12 +14,12 @@ LOGS_DIR = Path("logs/")
 
 
 def train(hparams, config=None): # type: ignore
-    logger = WandbLogger(name=f"{hparams.run_name}_{hparams.algorithm}",
-                         project=PROJECT_NAME,
-                         save_dir=LOGS_DIR,
-                         log_model=True,
-                         anonymous=True,)  # Simply allows for anonymous logging but doesn't force
-    csv_logger = CSVLogger(save_dir=LOGS_DIR)
+    # logger = WandbLogger(name=f"{hparams.run_name}_{hparams.algorithm}",
+    #                      project=PROJECT_NAME,
+    #                      save_dir=LOGS_DIR,
+    #                      log_model=True,
+    #                      anonymous=True,)  # Simply allows for anonymous logging but doesn't force
+    # csv_logger = CSVLogger(save_dir=LOGS_DIR)
 
     hparams: dict = vars(hparams)
     hparams.pop('run_name')
@@ -31,7 +31,7 @@ def train(hparams, config=None): # type: ignore
 
     catch_module = PolicyGradientModule(**hparams)
     trainer = Trainer(max_epochs=max_epochs,
-                      logger=[logger, csv_logger],
+                    #   logger=[logger, csv_logger],
                       log_every_n_steps=10,
                       callbacks=callbacks,
                       )

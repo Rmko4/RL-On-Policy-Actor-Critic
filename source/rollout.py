@@ -1,53 +1,65 @@
 import random
+from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Iterator
 from typing import List, NamedTuple, Tuple
-from abc import ABC, abstractmethod
 
 import numpy as np
-from torch import Tensor
+from gymnasium.vector import VectorEnv
+from torch import Tensor, nn
 from torch.utils.data import IterableDataset
 
-class Trajectory(NamedTuple):
+
+class RolloutSample(NamedTuple):
     # Using typing.NamedTuple
-    state: np.ndarray | Tensor
-    action: int | Tensor
-    reward: float | Tensor
-    next_state: np.ndarray | Tensor
+    states: np.ndarray | Tensor
+    actions: np.ndarray | Tensor
+    rewards: float | Tensor
+    returns: float | Tensor
+    log_probs: float | Tensor
     terminal: bool | Tensor
 
 
-class ReplayBuffer(ABC):
-    def __init__(self, capacity: int) -> None:
-        self.capacity = capacity
-        self.buffer = []
-        self.index = 0
+class RolloutBuffer():
+    def __init__(self, buffer_size: int, num_envs: int) -> None:
+        self.buffer_size = buffer_size
+        self.num_envs = num_envs
+        self.reset()
 
-    def __len__(self) -> int:
-        return len(self.buffer)
-
-    def append(self, trajectory: Trajectory) -> None:
-        if len(self.buffer) < self.capacity:
-            self.buffer.append(trajectory)
-        else:
-            self.buffer[self.index] = trajectory
-        self.index = (self.index + 1) % self.capacity
-
-    @abstractmethod
-    def sample(self, batch_size: int, *args, **kwargs) -> List[Trajectory]:
+    def __getitem__(self, index: int) -> RolloutSample:
         pass
 
-    @abstractmethod
-    def choice(self) -> Trajectory:
-        raise NotImplementedError
+    def collect(self) -> None:
+        pass
+
+    def reset(self):
+        pass
+
+    @property
+    def size(self) -> int:
+        return 1
 
 
-class UniformReplayBuffer(ReplayBuffer):
-    def sample(self, batch_size: int) -> List[Trajectory]:
-        return random.sample(self.buffer, batch_size)
+class RolloutAgent():
+    def __init__(self,
+                 env: VectorEnv,
+                 policy_network: nn.Module,
+                 num_rollout_steps: int = 5) -> None:
+        self.env = env
+        self.policy_network = policy_network
+        self.num_rollout_steps = num_rollout_steps
 
-    def choice(self) -> Trajectory:
-        return random.choice(self.buffer)
+        self.rollout_buffer = RolloutBuffer(num_rollout_steps, env.num_envs)
+        
+
+    def perform_rollout(self) -> None:
+        buffer = self.rollout_buffer
+        buffer.reset()
+
+        for step in range(self.num_rollout_steps):
+            pass
+
+        pass
 
 
 class RolloutBufferDataset(IterableDataset):
@@ -55,21 +67,20 @@ class RolloutBufferDataset(IterableDataset):
         Supports random sampling of dynamic replay buffer
     """
 
-    def __init__(self, replay_buffer: ReplayBuffer) -> None:
-        self.replay_buffer = replay_buffer
-        self.iter = True
+    def __init__(self,
+                 rollout_agent: RolloutAgent,
+                 max_steps: int = 10) -> None:
+        self.rollout_agent = rollout_agent
+        self.max_steps = max_steps
+        self.rollout_buffer = rollout_agent.rollout_buffer
 
     def __iter__(self) -> Iterator:
-        while self.iter:
-            yield self.replay_buffer.choice()
-        # Iterator recovers itself after being killed
-        self.iter = True
-
-    def end(self) -> None:
-        # Will kill the iterator
-        self.iter = False
+        for epoch_step in range(self.max_steps):
+            self.rollout_agent.perform_rollout()
 
 
+            for i in range(self.rollout_buffer.size):
+                yield self.rollout_buffer[i]
 
 
 # def main():
