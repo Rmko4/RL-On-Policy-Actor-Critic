@@ -15,8 +15,7 @@ obs = env.reset()
 # %%
 # Run a few episodes
 for episode in range(5):
-    done = False
-    truncated = False
+    done = truncated = False
     total_reward = 0
 
     obs = env.reset()
@@ -38,10 +37,6 @@ for episode in range(5):
     # Print the total reward for the episode
     print("Episode:", episode + 1, "Total Reward:", total_reward)
 
-
 # %%
-
 # Close the environment
 env.close()
-
-# %%
