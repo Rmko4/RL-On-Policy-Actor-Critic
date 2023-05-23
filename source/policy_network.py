@@ -72,7 +72,7 @@ class ActorCriticPolicy(nn.Module):
         return value
     
     def evaluate(self, x: Tensor, action: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
-        action_distribution, value = self.forward(x)
+        action_distribution, value = self(x)
 
         # log pi(a_t|s_t) = sum_i log pi(a^(i)_t|s_t)
         log_prob = action_distribution.log_prob(action)
@@ -83,3 +83,8 @@ class ActorCriticPolicy(nn.Module):
 
     def update_device(self):
         self.device = next(self.parameters()).device
+
+    def act(self, x: Tensor) -> Tensor:
+        action_distribution, _ = self(x)
+        action = action_distribution.sample()
+        return action

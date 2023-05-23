@@ -1,7 +1,10 @@
+import time
 from typing import Any, Callable, Dict, Optional, Type
 
 import gymnasium as gym
+import numpy as np
 import torch
+from gymnasium import spaces
 from policy_network import ActorCriticPolicy
 from pytorch_lightning import LightningModule
 from rollout import RolloutAgent, RolloutBufferDataset, RolloutSample
@@ -61,6 +64,7 @@ class PolicyGradientModule(LightningModule):
         # Retrieves log pi(a_t|s_t), V(s_t), entropy: H(pi)
         log_prob, value, entropy = self.policy.evaluate(
             batch.state, batch.action)
+        value = value.flatten()
 
         # Advantage estimate
         # A(s_t, a_t) = R_t - V(s_t)
@@ -89,6 +93,13 @@ class PolicyGradientModule(LightningModule):
                            + self.hparams.entropy_coef * entropy_loss
 
         # TODO: Clip gradients. Can do in trainer args.
+
+        # Log metrics
+        self.log('policy_loss', policy_loss)
+        self.log('value_loss', value_loss)
+        self.log('entropy_loss', entropy_loss)
+        self.log('loss', loss, prog_bar=True)
+
         return loss
 
     def on_train_start(self) -> None:
@@ -100,7 +111,42 @@ class PolicyGradientModule(LightningModule):
         self.test_epoch()
 
     def test_epoch(self):
-        pass
+        env = gym.make(self.hparams.env_id, render_mode='human')
+
+        # %%
+        # Run a few episodes
+        for episode in range(1):
+            done = truncated = False
+            total_reward = 0.
+
+            state, _ = env.reset()
+            state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
+
+            while not done:
+                # time.sleep(0.01)
+                # Choose a random action
+                action = self.policy.act(state)
+                action = action.cpu().numpy()
+                clipped_action = action
+                # Environment has boxed action space, so clip actions.
+                if isinstance(env.action_space, spaces.Box):
+                    clipped_action = np.clip(action, env.action_space.low,
+                                            env.action_space.high)
+
+                # Perform the action in the environment
+                state, reward, done, truncated, info = env.step(clipped_action)
+                state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
+
+                # Update the total reward
+                total_reward += float(reward)
+
+                if done or truncated:
+                    break
+
+            # Print the total reward for the episode
+            print("Episode:", episode + 1, "Total Reward:", total_reward)
+
+        env.close()
 
     def train_dataloader(self) -> DataLoader:
         self.dataset = RolloutBufferDataset(

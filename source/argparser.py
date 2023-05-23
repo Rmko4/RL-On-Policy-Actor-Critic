@@ -31,6 +31,8 @@ def get_args():
                         help="Coefficient for value loss")
     parser.add_argument("--entropy_coef", type=float, default=0.01,
                         help="Coefficient for entropy loss")
+    parser.add_argument("--max_grad_norm", type=float, default=0.5,
+                        help="Maximum gradient norm for clipping")
     
 
     # parser.add_argument("--log_video", action="store_true",

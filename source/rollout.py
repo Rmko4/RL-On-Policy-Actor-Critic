@@ -98,8 +98,7 @@ class RolloutBuffer():
         self.reward_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
         self.return_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
 
-        self.log_prob_buffer = np.zeros(
-            (self.buffer_size, *self.action_space), dtype=np.float32)
+        self.log_prob_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
         self.done_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
 
         self.add_buffer = [self.state_buffer, self.action_buffer,
