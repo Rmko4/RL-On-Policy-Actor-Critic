@@ -1,15 +1,12 @@
-import random
-from abc import ABC, abstractmethod
-from collections import deque
 from collections.abc import Iterator
-from typing import List, NamedTuple, Tuple
+from typing import NamedTuple, Tuple
 
 import numpy as np
 import torch
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv
 from policy_network import ActorCriticPolicy
-from torch import Tensor, nn
+from torch import Tensor
 from torch.distributions import Distribution
 from torch.utils.data import IterableDataset
 
@@ -35,6 +32,7 @@ class RolloutBuffer():
         self.buffer_size = buffer_size
         self.num_envs = num_envs
         self.buffer_shape = (buffer_size, num_envs)
+        self.batch_size = buffer_size * num_envs
         self.state_space = state_space
         self.action_space = action_space
         self.gamma = gamma
@@ -54,10 +52,11 @@ class RolloutBuffer():
         return sample
 
     def __iter__(self) -> Iterator[RolloutSample]:
+        assert self.finalized, "Should only iterate over finalized buffer"
         return self
 
     def __next__(self) -> RolloutSample:
-        if self.iter_pos < self.size:
+        if self.iter_pos < self.size * self.num_envs:
             sample = self[self.iter_pos]
             self.iter_pos += 1
             return sample
@@ -82,6 +81,13 @@ class RolloutBuffer():
         assert self.size == self.buffer_size, "Should only finalize when buffer is full"
         self._compute_gae_returns(last_value)
 
+        # Flatten the outer dims
+        for buffer_name in self.get_buffer_names:
+            buffer: np.ndarray = self.__dict__[buffer_name]
+            self.__dict__[buffer_name] = buffer.reshape(self.batch_size, *buffer.shape[2:])
+
+        self.finalized = True
+
     def reset(self):
         self.state_buffer = np.zeros(
             (*self.buffer_shape, *self.state_space), dtype=np.float32)
@@ -100,6 +106,10 @@ class RolloutBuffer():
                            self.reward_buffer, self.done_buffer,
                            self.value_buffer, self.log_prob_buffer]
 
+        self.get_buffer_names = ["state_buffer", "action_buffer",
+                           "value_buffer", "return_buffer",
+                           "log_prob_buffer", "done_buffer"]
+
         self.head_pos = 0
         self.iter_pos = 0
         self.finalized = False
@@ -115,7 +125,7 @@ class RolloutBuffer():
 
             delta = reward + self.gamma * value_next * (1 - done) - value
             advantage = delta + self.gamma * self.gae_lambda * \
-                 last_advantage * (1 - done)
+                last_advantage * (1 - done)
             self.return_buffer[t] = advantage + value
 
             value_next = value

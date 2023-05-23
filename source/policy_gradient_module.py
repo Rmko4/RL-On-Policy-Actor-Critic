@@ -72,7 +72,7 @@ class PolicyGradientModule(LightningModule):
         self.dataset = RolloutBufferDataset(
             self.rollout_agent,
             max_steps=self.hparams.steps_per_epoch)  # type: ignore
-        return DataLoader(self.dataset, batch_size=self.hparams.num_rollout_steps)
+        return DataLoader(self.dataset, batch_size=self.batch_size)
 
     def configure_optimizers(self) -> Optimizer:
         return OPTIMIZERS[self.hparams.optimizer](self.policy.parameters(),  # type: ignore
