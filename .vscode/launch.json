@@ -11,7 +11,9 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "args": []
+            "args": [
+                "--num_envs", "3",
+            ]
         }
     ]
 }

@@ -90,16 +90,16 @@ class RolloutBuffer():
 
     def reset(self):
         self.state_buffer = np.zeros(
-            (*self.buffer_shape, *self.state_space), dtype=np.float32)
+            (self.buffer_size, *self.state_space), dtype=np.float32)
         self.action_buffer = np.zeros(
-            (*self.buffer_shape, *self.action_space), dtype=np.float32)
+            (self.buffer_size, *self.action_space), dtype=np.float32)
 
         self.value_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
         self.reward_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
         self.return_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
 
         self.log_prob_buffer = np.zeros(
-            (*self.buffer_shape, *self.action_space), dtype=np.float32)
+            (self.buffer_size, *self.action_space), dtype=np.float32)
         self.done_buffer = np.zeros(self.buffer_shape, dtype=np.float32)
 
         self.add_buffer = [self.state_buffer, self.action_buffer,
@@ -180,7 +180,7 @@ class RolloutAgent():
 
             # Sample an action vector given the policy distribution conditioned on state.
             action = action_dist.sample()
-            log_prob = action_dist.log_prob(action).cpu().numpy()
+            log_prob = action_dist.log_prob(action).sum(dim=-1).cpu().numpy()
             action = action.cpu().numpy()
             value = value.cpu().numpy().flatten()
 
@@ -197,7 +197,7 @@ class RolloutAgent():
 
             for i, trunc in enumerate(truncated):
                 if trunc:
-                    final_state = info[i]['final_observation']
+                    final_state = info['final_observation'][i]
                     final_state = torch.as_tensor(
                         final_state, dtype=torch.float32, device=self.policy.device)
                     final_value = self.policy.predict_value(final_state)[0]

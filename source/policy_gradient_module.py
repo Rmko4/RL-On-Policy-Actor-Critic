@@ -4,11 +4,10 @@ import gymnasium as gym
 import torch
 from policy_network import ActorCriticPolicy
 from pytorch_lightning import LightningModule
-from rollout import RolloutAgent, RolloutBuffer, RolloutBufferDataset
+from rollout import RolloutAgent, RolloutBufferDataset, RolloutSample
 from torch import Tensor, nn
 from torch.optim import SGD, Adam, Optimizer, RMSprop
 from torch.utils.data import DataLoader
-
 
 OPTIMIZERS: Dict[str, Type[torch.optim.Optimizer]] = {'Adam': Adam,
                                                       'RMSprop': RMSprop,
@@ -24,6 +23,8 @@ class PolicyGradientModule(LightningModule):
                  num_rollout_steps: int = 5,
                  optimizer: str = 'RMSProp',
                  learning_rate: float = 1e-3,
+                 value_coef: float = 0.5,
+                 entropy_coef: float = 0.01,
                  gamma: float = 0.99,
                  gae_lambda: float = 1.,
                  *args: Any,
@@ -49,13 +50,46 @@ class PolicyGradientModule(LightningModule):
                                           gamma=gamma,
                                           gae_lambda=gae_lambda)
 
+        self.mse_loss = nn.MSELoss()
         self.batch_size = num_envs * num_rollout_steps
 
-    # TODO: Typing
+    def training_step(self, batch: RolloutSample, batch_idx: int) -> Tensor:
+        # Run for one rollout sample
 
-    def training_step(self, batch, batch_idx: int) -> Tensor:
-        # Retrieve everything from rollout buffer
-        pass
+        # A2C
+        # Evaluate policy for state action pair pi(a_t|s_t)
+        # Retrieves log pi(a_t|s_t), V(s_t), entropy: H(pi)
+        log_prob, value, entropy = self.policy.evaluate(
+            batch.state, batch.action)
+
+        # Advantage estimate
+        # A(s_t, a_t) = R_t - V(s_t)
+        # Note, we use batch.value here as this one requires no grad.
+        # Alternatively we could detach: advantage.detach()
+        advantage = batch.return_ - batch.value
+
+        # Optionally could normalize advantage
+
+        # Policy loss
+        # L_pi = E_t [- log pi(a_t|s_t) * A(s_t, a_t)]
+        policy_loss = -(log_prob * advantage).mean()
+
+        # Value loss
+        # L_v = E_t [(R_t - V(s_t))^2]
+        # Note this loss is simply advantage squared, value requires grad here.
+        value_loss = self.mse_loss(batch.return_, value)
+
+        # Entropy loss
+        # L_H = E_t [H(pi)]
+        entropy_loss = -entropy.mean()
+
+        # Total loss
+        # L = L_pi + L_v + L_H
+        loss = policy_loss + self.hparams.value_coef * value_loss \
+                           + self.hparams.entropy_coef * entropy_loss
+
+        # TODO: Clip gradients. Can do in trainer args.
+        return loss
 
     def on_train_start(self) -> None:
         self.rollout_agent.prepare()

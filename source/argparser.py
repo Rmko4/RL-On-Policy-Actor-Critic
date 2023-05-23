@@ -25,6 +25,13 @@ def get_args():
                         help="Learning rate for training")
     parser.add_argument("--gamma", type=float, default=0.99,
                         help="Discount factor")
+    parser.add_argument("--gae_lambda", type=float, default=1.,
+                        help="Lambda parameter for GAE")
+    parser.add_argument("--value_coef", type=float, default=0.5,
+                        help="Coefficient for value loss")
+    parser.add_argument("--entropy_coef", type=float, default=0.01,
+                        help="Coefficient for entropy loss")
+    
 
     # parser.add_argument("--log_video", action="store_true",
     #                     help="Whether to log video of agent's performance")

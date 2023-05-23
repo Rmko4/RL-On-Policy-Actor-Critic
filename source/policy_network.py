@@ -63,8 +63,6 @@ class ActorCriticPolicy(nn.Module):
         std = self.log_std.exp().expand_as(mu)
 
         action_distribution = Normal(mu, std)
-        # actions = distribution.sample()
-        # log_prob = distribution.log_prob(actions)
 
         return action_distribution, value
 
@@ -72,6 +70,16 @@ class ActorCriticPolicy(nn.Module):
         features = self.feature_extractor(x)
         value = self.critic_head(features)
         return value
+    
+    def evaluate(self, x: Tensor, action: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+        action_distribution, value = self.forward(x)
+
+        # log pi(a_t|s_t) = sum_i log pi(a^(i)_t|s_t)
+        log_prob = action_distribution.log_prob(action)
+        log_prob = log_prob.sum(dim=-1)
+
+        entropy = action_distribution.entropy()
+        return log_prob, value, entropy
 
     def update_device(self):
         self.device = next(self.parameters()).device
