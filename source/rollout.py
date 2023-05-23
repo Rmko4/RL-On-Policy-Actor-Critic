@@ -179,7 +179,9 @@ class RolloutAgent():
 
             # Sample an action vector given the policy distribution conditioned on state.
             action = action_dist.sample()
-            log_prob = action_dist.log_prob(action).sum(dim=-1).cpu().numpy()
+            # Note this is the log pdf of the sampled action. (So can be positive)
+            log_prob = action_dist.log_prob(action)
+            log_prob = log_prob.sum(dim=-1).cpu().numpy()
             action = action.cpu().numpy()
             value = value.cpu().numpy().flatten()
 

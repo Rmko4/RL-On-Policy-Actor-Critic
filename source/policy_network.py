@@ -1,3 +1,4 @@
+import math
 from typing import Tuple
 
 import torch
@@ -8,7 +9,8 @@ from torch.distributions import Distribution, Normal
 class ActorCriticPolicy(nn.Module):
     def __init__(self, state_size: int,
                  n_actions: int,
-                 hidden_size: int = 128) -> None:
+                 hidden_size: int = 128,
+                 init_std: float = 1.) -> None:
         super().__init__()
         self.state_size = state_size
         self.n_actions = n_actions
@@ -17,20 +19,23 @@ class ActorCriticPolicy(nn.Module):
         # Default shared feature extractor.
         self.feature_extractor = nn.Sequential(
             nn.Linear(state_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
             nn.ReLU()
         )
 
         self.actor_head = nn.Sequential(
-            nn.Linear(hidden_size, n_actions)
+            nn.Linear(hidden_size, n_actions),
+            nn.Tanh() # Squash actions to [-1, 1]
         )
 
         self.critic_head = nn.Sequential(
             nn.Linear(hidden_size, 1)
         )
 
-        # Initialize the log standard deviation to zeros (std = 1)
+        # Initialize the log standard deviation to -1 (std = 0.36)
         # Use log std to make sure std is always positive (such that it is differentiable)
-        self.log_std = nn.Parameter(torch.zeros(
+        self.log_std = nn.Parameter(math.log(init_std)*torch.ones(
             self.n_actions), requires_grad=True)
 
         self.init_weights()
@@ -70,7 +75,7 @@ class ActorCriticPolicy(nn.Module):
         features = self.feature_extractor(x)
         value = self.critic_head(features)
         return value
-    
+
     def evaluate(self, x: Tensor, action: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         action_distribution, value = self(x)
 

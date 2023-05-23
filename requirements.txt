@@ -1,6 +1,6 @@
 numpy
 scikit-image
-gymnasium[mujoco]
+gymnasium[mujoco, box2d]
 opencv-python
 torch
 pytorch-lightning

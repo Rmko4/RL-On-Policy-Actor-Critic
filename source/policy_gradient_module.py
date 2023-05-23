@@ -30,6 +30,7 @@ class PolicyGradientModule(LightningModule):
                  entropy_coef: float = 0.01,
                  gamma: float = 0.99,
                  gae_lambda: float = 1.,
+                 init_std: float = 1.,
                  *args: Any,
                  **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -45,7 +46,8 @@ class PolicyGradientModule(LightningModule):
 
         self.policy = ActorCriticPolicy(state_size=self.state_size,
                                         n_actions=self.n_actions,
-                                        hidden_size=128)
+                                        hidden_size=128,
+                                        init_std=init_std)
 
         self.rollout_agent = RolloutAgent(self.env,
                                           self.policy,
@@ -99,6 +101,8 @@ class PolicyGradientModule(LightningModule):
         self.log('value_loss', value_loss)
         self.log('entropy_loss', entropy_loss)
         self.log('loss', loss, prog_bar=True)
+        self.log('std', self.policy.log_std[0].exp().item(), prog_bar=True)
+        self.log('return', batch.return_.mean().item(), prog_bar=True)
 
         return loss
 
@@ -111,11 +115,11 @@ class PolicyGradientModule(LightningModule):
         self.test_epoch()
 
     def test_epoch(self):
-        env = gym.make(self.hparams.env_id, render_mode='human')
+        env = gym.make(self.hparams.env_id)#, render_mode='human')
 
         # %%
         # Run a few episodes
-        for episode in range(1):
+        for episode in range(3):
             done = truncated = False
             total_reward = 0.
 
@@ -144,7 +148,8 @@ class PolicyGradientModule(LightningModule):
                     break
 
             # Print the total reward for the episode
-            print("Episode:", episode + 1, "Total Reward:", total_reward)
+            self.log('test_reward', total_reward, prog_bar=True)
+            # print("Episode:", episode + 1, "Total Reward:", total_reward)
 
         env.close()
 

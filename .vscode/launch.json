@@ -13,6 +13,13 @@
             "justMyCode": false,
             "args": [
                 "--num_envs", "8",
+                "--learning_rate", "0.0002",
+                "--gae_lambda", "0.95",
+                "--entropy_coef", "0.001",
+                "--num_rollout_steps", "64",
+                "--steps_per_epoch", "50",
+                "--init_std", "0.1",
+                "--max_grad_norm", "0.2" 
             ]
         }
     ]

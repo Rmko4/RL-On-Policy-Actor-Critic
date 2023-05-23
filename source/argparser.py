@@ -19,7 +19,7 @@ def get_args():
     parser.add_argument("--num_rollout_steps", type=int, default=5,
                         help="Number of steps to rollout policy for")
     
-    parser.add_argument("--optimizer", type=str, default="Adam",
+    parser.add_argument("--optimizer", type=str, default="RMSprop",
                         choices=["Adam", "RMSprop", "SGD"])
     parser.add_argument("--learning_rate", type=float, default=1e-3,
                         help="Learning rate for training")
@@ -33,6 +33,8 @@ def get_args():
                         help="Coefficient for entropy loss")
     parser.add_argument("--max_grad_norm", type=float, default=0.5,
                         help="Maximum gradient norm for clipping")
+    parser.add_argument("--init_std", type=float, default=0.2,
+                        help="Initial standard deviation for policy")
     
 
     # parser.add_argument("--log_video", action="store_true",
