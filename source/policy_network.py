@@ -4,6 +4,7 @@ import torch
 from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
+
 class ActorCriticPolicy(nn.Module):
     def __init__(self, state_size: int,
                  n_actions: int,
@@ -27,12 +28,13 @@ class ActorCriticPolicy(nn.Module):
             nn.Linear(hidden_size, 1)
         )
 
-        # Initialize the log standard deviation to zeros.
+        # Initialize the log standard deviation to zeros (std = 1)
         # Use log std to make sure std is always positive (such that it is differentiable)
         self.log_std = nn.Parameter(torch.zeros(
             self.n_actions), requires_grad=True)
 
         self.init_weights()
+        self.update_device()
 
     def init_weights(self) -> None:
         # Initialize the weights of the network.
@@ -65,3 +67,11 @@ class ActorCriticPolicy(nn.Module):
         # log_prob = distribution.log_prob(actions)
 
         return action_distribution, value
+
+    def predict_value(self, x: Tensor) -> Tensor:
+        features = self.feature_extractor(x)
+        value = self.critic_head(features)
+        return value
+
+    def update_device(self):
+        self.device = next(self.parameters()).device

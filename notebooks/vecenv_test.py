@@ -3,7 +3,7 @@ import time
 
 # Set the environment ID
 env_id = 'Ant-v4'
-num_envs = 16
+num_envs = 2
 render_mode = None
 # render_mode = 'human'
 
@@ -44,7 +44,7 @@ def run(envs: gym.vector.VectorEnv):
 if __name__ == "__main__":
     # Create the environment
     envs = gym.vector.make(env_id, num_envs=num_envs, asynchronous=True,
-                           max_episode_steps=1000, render_mode=render_mode)
+                           max_episode_steps=10, render_mode=render_mode)
     pass
     run(envs)
     pass
