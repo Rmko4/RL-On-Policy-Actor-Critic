@@ -173,26 +173,23 @@ class RolloutAgent():
             with torch.no_grad():
                 last_state = torch.as_tensor(
                     self.last_state, dtype=torch.float32, device=self.policy.device)
-                action_dist, value = self.policy(last_state)
-                action_dist: Distribution
-                value: Tensor
+                action, log_prob, value = self.policy.sample(last_state)
 
-            # Sample an action vector given the policy distribution conditioned on state.
-            action = action_dist.sample()
-            # Note this is the log pdf of the sampled action. (So can be positive)
-            log_prob = action_dist.log_prob(action)
-            log_prob = log_prob.sum(dim=-1).cpu().numpy()
+            log_prob = log_prob.cpu().numpy()
             action = action.cpu().numpy()
             value = value.cpu().numpy().flatten()
 
-            clipped_action = action
-            # Environment has boxed action space, so clip actions.
-            if isinstance(self.env.action_space, spaces.Box):
-                clipped_action = np.clip(action, self.env.action_space.low,
-                                         self.env.action_space.high)
+            # TODO: Now we stored the clipped action.
+            # Log prob is not correct for these.
+
+            # clipped_action = action
+            # # Environment has boxed action space, so clip actions.
+            # if isinstance(self.env.action_space, spaces.Box):
+            #     clipped_action = np.clip(action, self.env.action_space.low,
+            #                              self.env.action_space.high)
 
             next_state, reward, terminated, truncated, info = self.env.step(
-                clipped_action)
+                action)
 
             done = terminated | truncated
 

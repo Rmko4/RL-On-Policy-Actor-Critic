@@ -41,11 +41,11 @@ class PolicyGradientModule(LightningModule):
         self.env = gym.vector.make(
             env_id, num_envs=num_envs, asynchronous=True)
 
-        self.state_size = self.env.observation_space.shape[-1]  # type: ignore
-        self.n_actions = self.env.action_space.shape[-1]  # type: ignore
+        self.state_space = self.env.observation_space
+        self.action_space = self.env.action_space
 
-        self.policy = ActorCriticPolicy(state_size=self.state_size,
-                                        n_actions=self.n_actions,
+        self.policy = ActorCriticPolicy(state_space=self.state_space,
+                                        action_space=self.action_space,
                                         hidden_size=128,
                                         init_std=init_std)
 
@@ -115,7 +115,7 @@ class PolicyGradientModule(LightningModule):
         self.test_epoch()
 
     def test_epoch(self):
-        env = gym.make(self.hparams.env_id, render_mode='human')
+        env = gym.make(self.hparams.env_id)#, render_mode='human')
 
         # %%
         # Run a few episodes
@@ -127,18 +127,19 @@ class PolicyGradientModule(LightningModule):
             state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
 
             while not done:
-                time.sleep(0.05)
+                # time.sleep(0.05)
                 # Choose a random action
                 action = self.policy.act(state)
-                action = action.cpu().numpy()
-                clipped_action = action
-                # Environment has boxed action space, so clip actions.
-                if isinstance(env.action_space, spaces.Box):
-                    clipped_action = np.clip(action, env.action_space.low,
-                                            env.action_space.high)
+                # Take action 0, as policy considers vectorized env.
+                action = action[0].cpu().numpy()
+                
+                # # Environment has boxed action space, so clip actions.
+                # if isinstance(env.action_space, spaces.Box):
+                #     clipped_action = np.clip(action, env.action_space.low,
+                #                             env.action_space.high)
 
                 # Perform the action in the environment
-                state, reward, done, truncated, info = env.step(clipped_action)
+                state, reward, done, truncated, info = env.step(action)
                 state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
 
                 # Update the total reward

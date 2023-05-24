@@ -2,31 +2,37 @@ import math
 from typing import Tuple
 
 import torch
+from gymnasium import spaces
 from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
+from action_utils import scale_and_clip_actions
+
 
 class ActorCriticPolicy(nn.Module):
-    def __init__(self, state_size: int,
-                 n_actions: int,
+    def __init__(self, state_space: spaces.Space,
+                 action_space: spaces.Space,
                  hidden_size: int = 128,
                  init_std: float = 1.) -> None:
         super().__init__()
-        self.state_size = state_size
-        self.n_actions = n_actions
+        self.state_space = state_space
+        self.action_space = action_space
+
+        self.state_size = state_space.shape[-1]
+        self.n_actions = action_space.shape[-1]
         self.hidden_size = hidden_size
 
         # Default shared feature extractor.
         self.feature_extractor = nn.Sequential(
-            nn.Linear(state_size, hidden_size),
-            nn.Tanh(),
+            nn.Linear(self.state_size, hidden_size),
+            nn.ReLU(),
             nn.Linear(hidden_size, hidden_size),
-            nn.Tanh()
+            nn.ReLU()
         )
 
         self.actor_head = nn.Sequential(
-            nn.Linear(hidden_size, n_actions),
-            nn.Tanh() # Squash actions to [-1, 1]
+            nn.Linear(hidden_size, self.n_actions),
+            nn.Tanh()  # Squash actions to [-1, 1]
         )
 
         self.critic_head = nn.Sequential(
@@ -64,17 +70,26 @@ class ActorCriticPolicy(nn.Module):
         features = self.feature_extractor(x)
 
         value = self.critic_head(features)
-        mu = 0.5 * self.actor_head(features)
+        mu = self.actor_head(features)
         std = self.log_std.exp().expand_as(mu)
 
         action_distribution = Normal(mu, std)
 
         return action_distribution, value
 
-    def predict_value(self, x: Tensor) -> Tensor:
-        features = self.feature_extractor(x)
-        value = self.critic_head(features)
-        return value
+    def sample(self, x: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
+        action_distribution, value = self(x)
+        action_distribution: Distribution
+
+        # Sample an action vector given the policy distribution conditioned on state.
+        action = action_distribution.sample()
+        sc_action = scale_and_clip_actions(action, self.action_space)
+
+        # Note this is the log pdf of the sampled action. (So can be positive)
+        log_prob = action_distribution.log_prob(action)
+        log_prob = log_prob.sum(dim=-1)
+
+        return sc_action, log_prob, value
 
     def evaluate(self, x: Tensor, action: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         action_distribution, value = self(x)
@@ -86,10 +101,15 @@ class ActorCriticPolicy(nn.Module):
         entropy = action_distribution.entropy()
         return log_prob, value, entropy
 
-    def update_device(self):
-        self.device = next(self.parameters()).device
-
     def act(self, x: Tensor) -> Tensor:
         action_distribution, _ = self(x)
         action = action_distribution.sample()
-        return action
+        return scale_and_clip_actions(action, self.action_space)
+
+    def predict_value(self, x: Tensor) -> Tensor:
+        features = self.feature_extractor(x)
+        value = self.critic_head(features)
+        return value
+
+    def update_device(self):
+        self.device = next(self.parameters()).device
