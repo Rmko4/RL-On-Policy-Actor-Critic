@@ -6,14 +6,16 @@ from gymnasium import spaces
 from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
-from action_utils import scale_and_clip_actions
+from action_utils import scale_and_clip_actions, scale_actions
 
 
 class ActorCriticPolicy(nn.Module):
     def __init__(self, state_space: spaces.Space,
                  action_space: spaces.Space,
                  hidden_size: int = 128,
-                 init_std: float = 1.) -> None:
+                 shared_feature_extractor: bool = True,
+                 init_std: float = 1.,
+                 dropout_prob: float = 0.5) -> None:
         super().__init__()
         self.state_space = state_space
         self.action_space = action_space
@@ -21,13 +23,16 @@ class ActorCriticPolicy(nn.Module):
         self.state_size = state_space.shape[-1]
         self.n_actions = action_space.shape[-1]
         self.hidden_size = hidden_size
+        self.dropout_prob = dropout_prob
 
         # Default shared feature extractor.
         self.feature_extractor = nn.Sequential(
             nn.Linear(self.state_size, hidden_size),
-            nn.ReLU(),
+            nn.Tanh(),
+            nn.Dropout(p=self.dropout_prob),
             nn.Linear(hidden_size, hidden_size),
-            nn.ReLU()
+            nn.Tanh(),
+            nn.Dropout(p=self.dropout_prob)
         )
 
         self.actor_head = nn.Sequential(
@@ -71,6 +76,8 @@ class ActorCriticPolicy(nn.Module):
 
         value = self.critic_head(features)
         mu = self.actor_head(features)
+        # mu = scale_actions(mu, self.action_space)
+
         std = self.log_std.exp().expand_as(mu)
 
         action_distribution = Normal(mu, std)
@@ -83,13 +90,13 @@ class ActorCriticPolicy(nn.Module):
 
         # Sample an action vector given the policy distribution conditioned on state.
         action = action_distribution.sample()
-        sc_action = scale_and_clip_actions(action, self.action_space)
+        # sc_action = scale_and_clip_actions(action, self.action_space)
 
         # Note this is the log pdf of the sampled action. (So can be positive)
         log_prob = action_distribution.log_prob(action)
         log_prob = log_prob.sum(dim=-1)
 
-        return sc_action, log_prob, value
+        return action, log_prob, value
 
     def evaluate(self, x: Tensor, action: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
         action_distribution, value = self(x)
@@ -104,7 +111,8 @@ class ActorCriticPolicy(nn.Module):
     def act(self, x: Tensor) -> Tensor:
         action_distribution, _ = self(x)
         action = action_distribution.sample()
-        return scale_and_clip_actions(action, self.action_space)
+        # return scale_and_clip_actions(action, self.action_space)
+        return action
 
     def predict_value(self, x: Tensor) -> Tensor:
         features = self.feature_extractor(x)

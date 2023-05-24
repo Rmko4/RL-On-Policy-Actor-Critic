@@ -182,14 +182,14 @@ class RolloutAgent():
             # TODO: Now we stored the clipped action.
             # Log prob is not correct for these.
 
-            # clipped_action = action
-            # # Environment has boxed action space, so clip actions.
-            # if isinstance(self.env.action_space, spaces.Box):
-            #     clipped_action = np.clip(action, self.env.action_space.low,
-            #                              self.env.action_space.high)
+            clipped_action = action
+            # Environment has boxed action space, so clip actions.
+            if isinstance(self.env.action_space, spaces.Box):
+                clipped_action = np.clip(action, self.env.action_space.low,
+                                         self.env.action_space.high)
 
             next_state, reward, terminated, truncated, info = self.env.step(
-                action)
+                clipped_action)
 
             done = terminated | truncated
 

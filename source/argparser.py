@@ -38,6 +38,12 @@ def get_args():
     parser.add_argument("--init_std", type=float, default=0.2,
                         help="Initial standard deviation for policy")
     
+    parser.add_argument("--hidden_size", type=int, default=128,
+                        help="Hidden size for policy")
+    parser.add_argument("--dropout", type=float, default=0.,
+                        help="Dropout probability for policy")
+    
+    
 
     # parser.add_argument("--log_video", action="store_true",
     #                     help="Whether to log video of agent's performance")
