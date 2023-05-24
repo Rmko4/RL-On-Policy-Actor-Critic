@@ -14,7 +14,7 @@ LOGS_DIR = Path("logs/")
 
 
 def train(hparams, config=None): # type: ignore
-    logger = WandbLogger(name=f"{hparams.run_name}_{hparams.algorithm}",
+    logger = WandbLogger(name=f"{hparams.run_name}_{hparams.algorithm}_{hparams.env_id}",
                          project=PROJECT_NAME,
                          save_dir=LOGS_DIR,
                          log_model=True,

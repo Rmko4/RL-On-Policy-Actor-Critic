@@ -19,9 +19,9 @@ class ActorCriticPolicy(nn.Module):
         # Default shared feature extractor.
         self.feature_extractor = nn.Sequential(
             nn.Linear(state_size, hidden_size),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(hidden_size, hidden_size),
-            nn.ReLU()
+            nn.Tanh()
         )
 
         self.actor_head = nn.Sequential(
@@ -64,7 +64,7 @@ class ActorCriticPolicy(nn.Module):
         features = self.feature_extractor(x)
 
         value = self.critic_head(features)
-        mu = self.actor_head(features)
+        mu = 0.5 * self.actor_head(features)
         std = self.log_std.exp().expand_as(mu)
 
         action_distribution = Normal(mu, std)

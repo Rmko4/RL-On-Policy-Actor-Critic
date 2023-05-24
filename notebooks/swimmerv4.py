@@ -3,7 +3,7 @@ import gymnasium as gym
 import time
 
 # Set the environment ID
-env_id = 'CarRacing-v2'
+env_id = 'Swimmer-v4'
 
 # Create the environment
 env = gym.make(env_id, render_mode='human')

@@ -9,6 +9,8 @@ def get_args():
     parser.add_argument("--algorithm", type=str, default="A2C",
                         choices=["A2C", "PPO"],
                         help="Type of algorithm to use for training")
+    parser.add_argument("--env_id", type=str, default="Ant-v4",
+                        help="Id of the environment to train on")
     
     parser.add_argument("--max_epochs", type=int, default=100,
                         help="Maximum number of steps to train for")

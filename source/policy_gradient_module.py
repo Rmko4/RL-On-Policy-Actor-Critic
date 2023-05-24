@@ -115,11 +115,11 @@ class PolicyGradientModule(LightningModule):
         self.test_epoch()
 
     def test_epoch(self):
-        env = gym.make(self.hparams.env_id)#, render_mode='human')
+        env = gym.make(self.hparams.env_id, render_mode='human')
 
         # %%
         # Run a few episodes
-        for episode in range(3):
+        for episode in range(1):
             done = truncated = False
             total_reward = 0.
 
@@ -127,7 +127,7 @@ class PolicyGradientModule(LightningModule):
             state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
 
             while not done:
-                # time.sleep(0.01)
+                time.sleep(0.05)
                 # Choose a random action
                 action = self.policy.act(state)
                 action = action.cpu().numpy()
