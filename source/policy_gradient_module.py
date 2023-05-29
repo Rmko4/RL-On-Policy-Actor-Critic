@@ -32,6 +32,9 @@ class PolicyGradientModule(LightningModule):
                  gae_lambda: float = 1.,
                  init_std: float = 1.,
                  hidden_size: int = 128,
+                 ppo_batch_size: int = 64,
+                 ppo_epochs: int = 10,
+                 ppo_clip_ratio: float = 0.2,
                  *args: Any,
                  **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -59,9 +62,13 @@ class PolicyGradientModule(LightningModule):
         self.mse_loss = nn.MSELoss()
         self.batch_size = num_envs * num_rollout_steps
 
-    def training_step(self, batch: RolloutSample, batch_idx: int) -> Tensor:
-        # Run for one rollout sample
+        step_fn_dict = {'a2c': self.a2c_step, 'ppo': self.ppo_step}
+        self.step = step_fn_dict[algorithm.lower()]
 
+    def ppo_step(self, batch: RolloutSample) -> Tensor:
+        pass
+
+    def a2c_step(self, batch: RolloutSample) -> Tensor:
         # A2C
         # Evaluate policy for state action pair pi(a_t|s_t)
         # Retrieves log pi(a_t|s_t), V(s_t), entropy: H(pi)
@@ -107,6 +114,10 @@ class PolicyGradientModule(LightningModule):
 
         return loss
 
+    def training_step(self, batch: RolloutSample, batch_idx: int) -> Tensor:
+        # Run for one rollout sample
+        return self.step(batch)
+
     def on_train_start(self) -> None:
         self.rollout_agent.prepare()
         # Inform policy of new device
@@ -127,7 +138,8 @@ class PolicyGradientModule(LightningModule):
             total_reward = 0.
 
             state, _ = env.reset()
-            state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
+            state = torch.as_tensor(
+                state, dtype=torch.float32, device=self.device)
 
             while not done:
                 time.sleep(0.02)
@@ -135,15 +147,16 @@ class PolicyGradientModule(LightningModule):
                 action = self.policy.act(state)
                 # Take action 0, as policy considers vectorized env.
                 action = action.cpu().numpy()
-                
+
                 # # Environment has boxed action space, so clip actions.
                 if isinstance(env.action_space, spaces.Box):
                     clipped_action = np.clip(action, env.action_space.low,
-                                            env.action_space.high)
+                                             env.action_space.high)
 
                 # Perform the action in the environment
                 state, reward, done, truncated, info = env.step(clipped_action)
-                state = torch.as_tensor(state, dtype=torch.float32, device=self.device)
+                state = torch.as_tensor(
+                    state, dtype=torch.float32, device=self.device)
 
                 # Update the total reward
                 total_reward += float(reward)
