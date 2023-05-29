@@ -75,8 +75,55 @@ class PolicyGradientModule(LightningModule):
         self.total_frames = 0
 
     def ppo_step(self, batch: RolloutSample) -> Tensor:
-        clip_fractions = []
+        # PPO
 
+        # Evaluate policy for state action pair pi(a_t|s_t)
+        # Retrieves log pi(a_t|s_t), V(s_t), entropy: H(pi)
+        log_prob, value, entropy = self.policy.evaluate(
+            batch.state, batch.action)
+        value = value.flatten()
+
+        # Advantage estimate
+        # A(s_t, a_t) = R_t - V(s_t)
+        advantage = batch.return_ - batch.value
+
+        # pi_theta / pi_theta_old = exp(log pi_theta - log pi_theta_old)
+        prob_ratio = (log_prob - batch.log_prob).exp()
+
+        # Clipped surrogate loss
+        conservative_policy_loss = prob_ratio * advantage
+        clipped_policy_loss = (torch.clamp(prob_ratio,
+                                            1. - self.hparams.ppo_clip_ratio,
+                                            1. + self.hparams.ppo_clip_ratio)
+                                * advantage)
+        # Minus for gradient ascent
+        policy_loss = -torch.min(conservative_policy_loss, clipped_policy_loss).mean()
+
+        # Value loss
+        # L_v = E_t [(R_t - V(s_t))^2]
+        # Note this loss is simply advantage squared, value requires grad here.
+        value_loss = self.mse_loss(batch.return_, value)
+
+        # Entropy loss
+        # L_H = E_t [H(pi)]
+        entropy_loss = -entropy.mean()
+
+        # Total loss
+        # L = L_pi + L_v + L_H
+        loss = policy_loss + self.hparams.value_coef * value_loss \
+                           + self.hparams.entropy_coef * entropy_loss
+        
+        # Log metrics
+        self.total_frames += self.batch_size
+        self.log('policy_loss', policy_loss)
+        self.log('value_loss', value_loss)
+        self.log('entropy_loss', entropy_loss)
+        self.log('loss', loss, prog_bar=True)
+        self.log('frame_count', self.total_frames, prog_bar=True)
+        self.log('std', self.policy.log_std[0].exp().item(), prog_bar=True)
+        self.log('return', batch.return_.mean().item(), prog_bar=True)
+        
+        return loss
 
 
     def a2c_step(self, batch: RolloutSample) -> Tensor:
