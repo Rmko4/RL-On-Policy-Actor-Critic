@@ -40,8 +40,6 @@ def get_args():
     
     parser.add_argument("--hidden_size", type=int, default=128,
                         help="Hidden size for policy")
-    parser.add_argument("--dropout", type=float, default=0.,
-                        help="Dropout probability for policy")
     
     
 

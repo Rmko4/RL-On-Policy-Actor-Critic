@@ -14,8 +14,7 @@ class ActorCriticPolicy(nn.Module):
                  action_space: spaces.Space,
                  hidden_size: int = 128,
                  shared_feature_extractor: bool = True,
-                 init_std: float = 1.,
-                 dropout_prob: float = 0.5) -> None:
+                 init_std: float = 1.) -> None:
         super().__init__()
         self.state_space = state_space
         self.action_space = action_space
@@ -23,16 +22,13 @@ class ActorCriticPolicy(nn.Module):
         self.state_size = state_space.shape[-1]
         self.n_actions = action_space.shape[-1]
         self.hidden_size = hidden_size
-        self.dropout_prob = dropout_prob
 
         # Default shared feature extractor.
         self.feature_extractor = nn.Sequential(
             nn.Linear(self.state_size, hidden_size),
             nn.Tanh(),
-            nn.Dropout(p=self.dropout_prob),
             nn.Linear(hidden_size, hidden_size),
             nn.Tanh(),
-            nn.Dropout(p=self.dropout_prob)
         )
 
         self.actor_head = nn.Sequential(

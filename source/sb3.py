@@ -4,7 +4,8 @@ from stable_baselines3 import A2C
 from stable_baselines3.common.env_util import make_vec_env
 
 # Create the Ant-v3 environment
-env = make_vec_env('Ant-v3', n_envs=8)
+# env = make_vec_env('Ant-v3', n_envs=8)
+env = make_vec_env('CartPole-v1')
 
 # Create the A2C agent
 model = A2C('MlpPolicy', env, verbose=1)

@@ -31,7 +31,6 @@ class PolicyGradientModule(LightningModule):
                  gamma: float = 0.99,
                  gae_lambda: float = 1.,
                  init_std: float = 1.,
-                 dropout: float = 0.,
                  hidden_size: int = 128,
                  *args: Any,
                  **kwargs: Any) -> None:
@@ -49,8 +48,7 @@ class PolicyGradientModule(LightningModule):
         self.policy = ActorCriticPolicy(state_space=self.state_space,
                                         action_space=self.action_space,
                                         hidden_size=hidden_size,
-                                        init_std=init_std,
-                                        dropout_prob=dropout,)
+                                        init_std=init_std)
 
         self.rollout_agent = RolloutAgent(self.env,
                                           self.policy,
