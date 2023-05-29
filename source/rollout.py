@@ -201,6 +201,18 @@ class RolloutAgent():
 
             done = terminated | truncated
 
+            # Reward and episode length tracking
+            self.rewards += reward
+            self.episode_steps += 1
+
+            for i, d in enumerate(done):
+                if d:
+                    self.episode_rewards.append(self.rewards[i])
+                    self.episode_lengths.append(self.episode_steps[i])
+                    self.rewards[i] = 0
+                    self.episode_steps[i] = 0
+
+            # Truncation case
             for i, trunc in enumerate(truncated):
                 if trunc:
                     final_state = info['final_observation'][i]
@@ -215,16 +227,6 @@ class RolloutAgent():
             buffer.add(self.last_state, action, reward, done, value, log_prob)
 
             self.last_state = next_state
-
-            self.rewards += reward
-            self.episode_steps += 1
-
-            for i, d in enumerate(done):
-                if d:
-                    self.episode_rewards.append(self.rewards[i])
-                    self.episode_lengths.append(self.episode_steps[i])
-                    self.rewards[i] = 0
-                    self.episode_steps[i] = 0
 
         # The value of the last state is required for the TD error.
         with torch.no_grad():
