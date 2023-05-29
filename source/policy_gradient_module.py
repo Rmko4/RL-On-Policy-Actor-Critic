@@ -7,7 +7,7 @@ import torch
 from gymnasium import spaces
 from policy_network import ActorCriticPolicy
 from pytorch_lightning import LightningModule
-from rollout import RolloutAgent, RolloutBufferDataset, RolloutSample
+from rollout import RolloutBufferDataset, RolloutAgent, RolloutSample
 from torch import Tensor, nn
 from torch.optim import SGD, Adam, Optimizer, RMSprop
 from torch.utils.data import DataLoader
@@ -60,13 +60,24 @@ class PolicyGradientModule(LightningModule):
                                           gae_lambda=gae_lambda)
 
         self.mse_loss = nn.MSELoss()
-        self.batch_size = num_envs * num_rollout_steps
+
+        algorithm = algorithm.lower()
+        if algorithm == 'a2c':
+            self.batch_size = num_envs * num_rollout_steps
+            self.n_epochs = 1
+        elif algorithm == 'ppo':
+            self.batch_size = ppo_batch_size
+            self.n_epochs = ppo_epochs
 
         step_fn_dict = {'a2c': self.a2c_step, 'ppo': self.ppo_step}
-        self.step = step_fn_dict[algorithm.lower()]
+        self.step = step_fn_dict[algorithm]
+
+        self.total_frames = 0
 
     def ppo_step(self, batch: RolloutSample) -> Tensor:
-        pass
+        clip_fractions = []
+
+
 
     def a2c_step(self, batch: RolloutSample) -> Tensor:
         # A2C
@@ -105,10 +116,12 @@ class PolicyGradientModule(LightningModule):
         # TODO: Clip gradients. Can do in trainer args.
 
         # Log metrics
+        self.total_frames += self.batch_size
         self.log('policy_loss', policy_loss)
         self.log('value_loss', value_loss)
         self.log('entropy_loss', entropy_loss)
         self.log('loss', loss, prog_bar=True)
+        self.log('frame_count', self.total_frames, prog_bar=True)
         self.log('std', self.policy.log_std[0].exp().item(), prog_bar=True)
         self.log('return', batch.return_.mean().item(), prog_bar=True)
 
@@ -173,7 +186,8 @@ class PolicyGradientModule(LightningModule):
     def train_dataloader(self) -> DataLoader:
         self.dataset = RolloutBufferDataset(
             self.rollout_agent,
-            max_steps=self.hparams.steps_per_epoch)  # type: ignore
+            max_steps=self.hparams.steps_per_epoch, # type: ignore
+            n_epochs=self.n_epochs)
         return DataLoader(self.dataset, batch_size=self.batch_size)
 
     def configure_optimizers(self) -> Optimizer:

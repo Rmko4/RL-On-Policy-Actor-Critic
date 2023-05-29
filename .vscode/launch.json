@@ -25,6 +25,10 @@
                 "--init_std", "0.3",
                 "--max_grad_norm", "0.2",
                 "--hidden_size", "512",
+                "--algorithm", "PPO",
+                "--ppo_batch_size", "64",
+                "--ppo_epochs", "10",
+                "--ppo_clip_ratio", "0.2"
             ]
         }
     ]

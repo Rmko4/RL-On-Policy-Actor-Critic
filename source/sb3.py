@@ -1,6 +1,6 @@
 import stable_baselines3 as sb3
 import gymnasium as gym
-from stable_baselines3 import A2C
+from stable_baselines3 import A2C, PPO
 from stable_baselines3.common.env_util import make_vec_env
 
 # Create the Ant-v3 environment
@@ -8,7 +8,7 @@ from stable_baselines3.common.env_util import make_vec_env
 env = make_vec_env('MountainCarContinuous-v0')
 
 # Create the A2C agent
-model = A2C('MlpPolicy', env, verbose=1)
+model = PPO('MlpPolicy', env, verbose=1)
 
 # Train the agent
 model.learn(total_timesteps=100000)

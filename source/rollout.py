@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from abc import ABC, abstractmethod
 from typing import NamedTuple, Tuple
 
 import numpy as np
@@ -84,7 +85,8 @@ class RolloutBuffer():
         # Flatten the outer dims
         for buffer_name in self.get_buffer_names:
             buffer: np.ndarray = self.__dict__[buffer_name]
-            self.__dict__[buffer_name] = buffer.reshape(self.batch_size, *buffer.shape[2:])
+            self.__dict__[buffer_name] = buffer.reshape(
+                self.batch_size, *buffer.shape[2:])
 
         self.finalized = True
 
@@ -106,8 +108,8 @@ class RolloutBuffer():
                            self.value_buffer, self.log_prob_buffer]
 
         self.get_buffer_names = ["state_buffer", "action_buffer",
-                           "value_buffer", "return_buffer",
-                           "log_prob_buffer", "done_buffer"]
+                                 "value_buffer", "return_buffer",
+                                 "log_prob_buffer", "done_buffer"]
 
         self.head_pos = 0
         self.iter_pos = 0
@@ -231,16 +233,74 @@ class RolloutBufferDataset(IterableDataset):
 
     def __init__(self,
                  rollout_agent: RolloutAgent,
-                 max_steps: int = 20) -> None:
+                 max_steps: int = 20,
+                 n_epochs: int = 1) -> None:
         self.rollout_agent = rollout_agent
+        # max_steps is the number of rollout steps before the dataset is exhausted.
+        # That is the number of times rollout is performed.
         self.max_steps = max_steps
+        # n_epochs is the number of times a rollout buffer is iterated over,
+        # before collecting new data.
+        self.n_epochs = n_epochs
         self.rollout_buffer = rollout_agent.rollout_buffer
 
     def __iter__(self) -> Iterator:
-        for epoch_step in range(self.max_steps):
+        for ds_epoch_step in range(self.max_steps):
             self.rollout_agent.perform_rollout()
-
+            for buffer_epoch_step in range(self.n_epochs):
             # Does not return iterator,
             # but instead wraps it in generator that also performs rollout.
-            for rollout_step in self.rollout_buffer:
-                yield rollout_step
+                for rollout_step in self.rollout_buffer:
+                    yield rollout_step
+
+# TODO: REMOVE
+# class BaseRolloutBufferDataset(IterableDataset, ABC):
+#     """ Base class of iterable dataset for rollout buffer
+#     """
+
+#     def __init__(self,
+#                  rollout_agent: RolloutAgent,
+#                  max_steps: int = 20) -> None:
+#         self.rollout_agent = rollout_agent
+#         # max_steps is the number of rollout steps before the dataset is exhausted.
+#         # That is the number of times rollout is performed.
+#         self.max_steps = max_steps
+#         self.rollout_buffer = rollout_agent.rollout_buffer
+
+#     def __iter__(self) -> Iterator:
+#         # Does not return iterator,
+#         # but instead wraps it in generator that also performs rollout.
+#         for epoch_step in range(self.max_steps):
+#             self.rollout_agent.perform_rollout()
+#             yield from self.buffer_iter()
+
+#     @abstractmethod
+#     def buffer_iter(self) -> Iterator:
+#         pass
+
+
+# class FullRolloutBufferDataset(BaseRolloutBufferDataset):
+#     def buffer_iter(self) -> Iterator:
+#         return iter(self.rollout_buffer)
+#         # for rollout_step in self.rollout_buffer:
+#         #     yield rollout_step
+
+
+# class BatchedRolloutBufferDataset(BaseRolloutBufferDataset):
+#     def __init__(self,
+#                  rollout_agent: RolloutAgent,
+#                  max_steps: int = 20,
+#                  n_epochs: int = 10,
+#                  batch_size: int = 32) -> None:
+#         super().__init__(rollout_agent, max_steps)
+#         self.n_epochs = n_epochs
+
+#     def buffer_iter(self) -> Iterator:
+#         for _ in range(self.n_epochs):
+
+#             for rollout_step in self.rollout_buffer:
+#                 if self.rollout_buffer.size >= self.batch_size:
+#                     yield rollout_step
+#                 else:
+#                     # If buffer is not full, continue to perform rollout.
+#                     continue
