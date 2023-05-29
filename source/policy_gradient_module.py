@@ -164,8 +164,9 @@ class PolicyGradientModule(LightningModule):
         # Run for one rollout sample
         losses = self.step(batch)
 
+        self.total_frames += self.batch_size / self.n_epochs
+        
         # Log metrics
-        self.total_frames += self.batch_size
         self.log('policy_loss', losses.policy_loss)
         self.log('value_loss', losses.value_loss)
         self.log('entropy_loss', losses.entropy_loss)
