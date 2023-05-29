@@ -1,5 +1,5 @@
 import time
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Dict, NamedTuple, Optional, Type
 
 import gymnasium as gym
 import numpy as np
@@ -15,6 +15,13 @@ from torch.utils.data import DataLoader
 OPTIMIZERS: Dict[str, Type[torch.optim.Optimizer]] = {'Adam': Adam,
                                                       'RMSprop': RMSprop,
                                                       'SGD': SGD}
+
+# Namedtuple class for loss policy loss, value loss, entropy loss
+class Losses(NamedTuple):
+    loss: Tensor
+    policy_loss: Tensor
+    value_loss: Tensor
+    entropy_loss: Tensor
 
 
 class PolicyGradientModule(LightningModule):
@@ -75,9 +82,8 @@ class PolicyGradientModule(LightningModule):
 
         self.total_frames = 0
 
-    def ppo_step(self, batch: RolloutSample) -> Tensor:
+    def ppo_step(self, batch: RolloutSample) -> Losses:
         # PPO
-
         # Evaluate policy for state action pair pi(a_t|s_t)
         # Retrieves log pi(a_t|s_t), V(s_t), entropy: H(pi)
         log_prob, value, entropy = self.policy.evaluate(
@@ -114,20 +120,10 @@ class PolicyGradientModule(LightningModule):
         loss = policy_loss + self.hparams.value_coef * value_loss \
                            + self.hparams.entropy_coef * entropy_loss
         
-        # Log metrics
-        self.total_frames += self.batch_size / self.n_epochs
-        self.log('policy_loss', policy_loss)
-        self.log('value_loss', value_loss)
-        self.log('entropy_loss', entropy_loss)
-        self.log('loss', loss, prog_bar=True)
-        self.log('frame_count', self.total_frames, prog_bar=True)
-        self.log('std', self.policy.log_std[0].exp().item(), prog_bar=True)
-        self.log('return', batch.return_.mean().item(), prog_bar=True)
-        
-        return loss
+        return Losses(loss, policy_loss, value_loss, entropy_loss)
 
 
-    def a2c_step(self, batch: RolloutSample) -> Tensor:
+    def a2c_step(self, batch: RolloutSample) -> Losses:
         # A2C
         # Evaluate policy for state action pair pi(a_t|s_t)
         # Retrieves log pi(a_t|s_t), V(s_t), entropy: H(pi)
@@ -160,24 +156,32 @@ class PolicyGradientModule(LightningModule):
         # L = L_pi + L_v + L_H
         loss = policy_loss + self.hparams.value_coef * value_loss \
                            + self.hparams.entropy_coef * entropy_loss
+        
+        return Losses(loss, policy_loss, value_loss, entropy_loss)
 
-        # TODO: Clip gradients. Can do in trainer args.
+
+    def training_step(self, batch: RolloutSample, batch_idx: int) -> Tensor:
+        # Run for one rollout sample
+        losses = self.step(batch)
 
         # Log metrics
         self.total_frames += self.batch_size
-        self.log('policy_loss', policy_loss)
-        self.log('value_loss', value_loss)
-        self.log('entropy_loss', entropy_loss)
-        self.log('loss', loss, prog_bar=True)
+        self.log('policy_loss', losses.policy_loss)
+        self.log('value_loss', losses.value_loss)
+        self.log('entropy_loss', losses.entropy_loss)
+        self.log('loss', losses.loss, prog_bar=True)
         self.log('frame_count', self.total_frames, prog_bar=True)
         self.log('std', self.policy.log_std[0].exp().item(), prog_bar=True)
         self.log('return', batch.return_.mean().item(), prog_bar=True)
 
-        return loss
+        ra = self.rollout_agent
+        if len(ra.episode_rewards) > 0:
+            rewards = np.array(ra.episode_rewards).mean()
+            self.log('rewards', rewards, prog_bar=True)
+            ra.episode_rewards = []
+            ra.episode_lengths = []
 
-    def training_step(self, batch: RolloutSample, batch_idx: int) -> Tensor:
-        # Run for one rollout sample
-        return self.step(batch)
+        return losses.loss
 
     def on_train_start(self) -> None:
         self.rollout_agent.prepare()

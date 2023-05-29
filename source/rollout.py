@@ -162,6 +162,11 @@ class RolloutAgent():
     def prepare(self) -> None:
         self.last_state, _ = self.env.reset()
 
+        self.rewards = np.zeros(self.env.num_envs, dtype=np.float32)
+        self.episode_steps = np.zeros(self.env.num_envs, dtype=np.int32)
+        self.episode_rewards = []
+        self.episode_lengths = []
+
     def perform_rollout(self) -> None:
         assert self.last_state is not None, "Call prepare() first"
 
@@ -209,10 +214,17 @@ class RolloutAgent():
             # Note that unclipped action is stored.
             buffer.add(self.last_state, action, reward, done, value, log_prob)
 
-            # Lets store only numpy objects in rollout buffer.
-            # When retrieving they are converted to tensors.
-
             self.last_state = next_state
+
+            self.rewards += reward
+            self.episode_steps += 1
+
+            for i, d in enumerate(done):
+                if d:
+                    self.episode_rewards.append(self.rewards[i])
+                    self.episode_lengths.append(self.episode_steps[i])
+                    self.rewards[i] = 0
+                    self.episode_steps[i] = 0
 
         # The value of the last state is required for the TD error.
         with torch.no_grad():
