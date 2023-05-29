@@ -26,6 +26,7 @@ class PolicyGradientModule(LightningModule):
                  num_rollout_steps: int = 5,
                  optimizer: str = 'RMSProp',
                  learning_rate: float = 1e-3,
+                 weight_decay: float = 0.,
                  value_coef: float = 0.5,
                  entropy_coef: float = 0.01,
                  gamma: float = 0.99,
@@ -114,7 +115,7 @@ class PolicyGradientModule(LightningModule):
                            + self.hparams.entropy_coef * entropy_loss
         
         # Log metrics
-        self.total_frames += self.batch_size
+        self.total_frames += self.batch_size / self.n_epochs
         self.log('policy_loss', policy_loss)
         self.log('value_loss', value_loss)
         self.log('entropy_loss', entropy_loss)
@@ -202,7 +203,7 @@ class PolicyGradientModule(LightningModule):
                 state, dtype=torch.float32, device=self.device)
 
             while not done:
-                time.sleep(0.02)
+                time.sleep(0.01)
                 # Choose a random action
                 action = self.policy.act(state)
                 # Take action 0, as policy considers vectorized env.
@@ -239,4 +240,5 @@ class PolicyGradientModule(LightningModule):
 
     def configure_optimizers(self) -> Optimizer:
         return OPTIMIZERS[self.hparams.optimizer](self.policy.parameters(),  # type: ignore
-                                                  lr=self.hparams.learning_rate)  # type: ignore
+                                                  lr=self.hparams.learning_rate,
+                                                  weight_decay=self.hparams.weight_decay)  # type: ignore

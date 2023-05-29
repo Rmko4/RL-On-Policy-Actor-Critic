@@ -12,23 +12,24 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "--env_id", "HalfCheetah-v4",
+                "--env_id", "Reacher-v4",
                 "--num_envs", "8",
                 "--max_epochs", "1000",
-                "--learning_rate", "3e-4",
+                "--steps_per_epoch", "50",
+                "--learning_rate", "0.0003",
                 "--gamma", "0.99",
                 "--gae_lambda", "0.95",
                 "--entropy_coef", "0.001",
                 "--value_coef", "0.5",
-                "--num_rollout_steps", "256",
-                "--steps_per_epoch", "50",
+                "--num_rollout_steps", "16",
                 "--init_std", "0.3",
                 "--max_grad_norm", "0.5",
                 "--hidden_size", "512",
                 "--algorithm", "PPO",
                 "--ppo_batch_size", "64",
                 "--ppo_epochs", "10",
-                "--ppo_clip_ratio", "0.2"
+                "--ppo_clip_ratio", "0.2",
+                "--weight_decay", "0.01",
             ]
         }
     ]

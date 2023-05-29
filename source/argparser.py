@@ -25,6 +25,8 @@ def get_args():
                         choices=["Adam", "RMSprop", "SGD"])
     parser.add_argument("--learning_rate", type=float, default=1e-3,
                         help="Learning rate for training")
+    parser.add_argument("--weight_decay", type=float, default=0.,
+                        help="Weight decay (L2 regularization) for training")
     parser.add_argument("--gamma", type=float, default=0.99,
                         help="Discount factor")
     parser.add_argument("--gae_lambda", type=float, default=1.,
