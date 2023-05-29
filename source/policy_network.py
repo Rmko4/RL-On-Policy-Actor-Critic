@@ -13,7 +13,6 @@ class ActorCriticPolicy(nn.Module):
     def __init__(self, state_space: spaces.Space,
                  action_space: spaces.Space,
                  hidden_size: int = 128,
-                 shared_feature_extractor: bool = True,
                  init_std: float = 1.) -> None:
         super().__init__()
         self.state_space = state_space
@@ -27,16 +26,18 @@ class ActorCriticPolicy(nn.Module):
         self.feature_extractor = nn.Sequential(
             nn.Linear(self.state_size, hidden_size),
             nn.Tanh(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.Tanh(),
         )
 
         self.actor_head = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.Tanh(),
             nn.Linear(hidden_size, self.n_actions),
             nn.Tanh()  # Squash actions to [-1, 1]
         )
 
         self.critic_head = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.Tanh(),
             nn.Linear(hidden_size, 1)
         )
 
@@ -72,7 +73,7 @@ class ActorCriticPolicy(nn.Module):
 
         value = self.critic_head(features)
         mu = self.actor_head(features)
-        # mu = scale_actions(mu, self.action_space)
+        mu = scale_actions(mu, self.action_space)
 
         std = self.log_std.exp().expand_as(mu)
 
