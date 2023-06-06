@@ -24,7 +24,7 @@ def train(hparams, config=None): # type: ignore
 
     hparams: dict = vars(hparams)
     hparams.pop('run_name')
-    max_epochs = hparams.pop('max_epochs')
+    max_epochs = hparams['max_epochs']
     gradient_clip_val = hparams.pop('max_grad_norm')
 
     callbacks = [LearningRateMonitor()]

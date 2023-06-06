@@ -14,9 +14,9 @@
             "args": [
                 "--env_id", "InvertedDoublePendulum-v4",
                 "--num_envs", "8",
-                "--max_epochs", "1000",
-                "--steps_per_epoch", "10",
-                "--learning_rate", "0.0003",
+                "--max_epochs", "200",
+                "--steps_per_epoch", "5",
+                "--learning_rate", "0.0005",
                 "--gamma", "0.99",
                 "--gae_lambda", "0.95",
                 "--entropy_coef", "0.001",
@@ -29,6 +29,7 @@
                 "--ppo_batch_size", "64",
                 "--ppo_epochs", "10",
                 "--ppo_clip_ratio", "0.1",
+                "--ppo_clip_anneal"
                 // "--weight_decay", "0.001",
             ]
         }

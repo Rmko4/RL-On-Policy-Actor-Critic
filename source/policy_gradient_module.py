@@ -47,11 +47,13 @@ class PolicyGradientModule(LightningModule):
                  ppo_batch_size: int = 64,
                  ppo_epochs: int = 10,
                  ppo_clip_ratio: float = 0.2,
+                 ppo_clip_anneal: bool = False,
+                 max_epochs: int = 1000,
                  *args: Any,
                  **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # Does frame inspection to find parameters
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['perform_testing', 'max_epochs'])
 
         # Makes envs in init already
         self.env = gym.vector.make(
@@ -87,7 +89,9 @@ class PolicyGradientModule(LightningModule):
         self.step = step_fn_dict[algorithm]
 
         self.total_frames = 0
+        self.max_frames = max_epochs * steps_per_epoch * num_envs * num_rollout_steps
         self.rewards = None
+        self.test_count = 0
 
     def ppo_step(self, batch: RolloutSample) -> Losses:
         # PPO
@@ -104,11 +108,16 @@ class PolicyGradientModule(LightningModule):
         # pi_theta / pi_theta_old = exp(log pi_theta - log pi_theta_old)
         prob_ratio = (log_prob - batch.log_prob).exp()
 
+        clip_ratio = self.hparams.ppo_clip_ratio
+        if self.hparams.ppo_clip_anneal:
+            # Anneal clip ratio from 1 to clip_ratio over training
+            clip_ratio = self.hparams.ppo_clip_ratio * \
+                (1 - self.total_frames / self.max_frames)
         # Clipped surrogate loss
         conservative_policy_loss = prob_ratio * advantage
         clipped_policy_loss = (torch.clamp(prob_ratio,
-                                            1. - self.hparams.ppo_clip_ratio,
-                                            1. + self.hparams.ppo_clip_ratio)
+                                            1. - clip_ratio,
+                                            1. + clip_ratio)
                                 * advantage)
         # Minus for gradient ascent
         policy_loss = -torch.min(conservative_policy_loss, clipped_policy_loss).mean()
@@ -193,9 +202,11 @@ class PolicyGradientModule(LightningModule):
 
     def on_train_epoch_end(self) -> None:
         if self.hparams.perform_testing:
-            self.policy.train(False)
-            self.test_epoch()
-            self.policy.train(True)
+            self.test_count += 1
+            if self.test_count % 20 == 0:
+                self.policy.train(False)
+                self.test_epoch()
+                self.policy.train(True)
 
     def test_epoch(self):
         env = gym.make(self.hparams.env_id, render_mode='human')
@@ -211,7 +222,7 @@ class PolicyGradientModule(LightningModule):
                 state, dtype=torch.float32, device=self.device)
 
             while not done:
-                time.sleep(0.01)
+                # time.sleep(0.01)
                 # Choose a random action
                 action = self.policy.act(state)
                 # Take action 0, as policy considers vectorized env.

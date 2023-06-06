@@ -57,6 +57,8 @@ def get_args():
                         help="Number of epochs to train PPO for")
     parser.add_argument("--ppo_clip_ratio", type=float, default=None,
                         help="Clip ratio for PPO")
+    parser.add_argument("--ppo_clip_anneal", action="store_true",
+                        help="Whether to anneal the clip ratio for PPO")
     
 
     args = parser.parse_args()
