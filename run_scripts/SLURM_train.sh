@@ -35,7 +35,8 @@ python source/train_agent.py \
 --hidden_size 512 \
 --ppo_batch_size 64 \
 --ppo_epochs 10 \
---ppo_clip_ratio 0.2
+--ppo_clip_ratio 0.1 \
+--ppo_clip_anneal
 
 
 python source/train_agent.py \

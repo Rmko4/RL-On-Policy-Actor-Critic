@@ -53,7 +53,7 @@ class PolicyGradientModule(LightningModule):
                  **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # Does frame inspection to find parameters
-        self.save_hyperparameters(ignore=['perform_testing', 'max_epochs'])
+        self.save_hyperparameters(ignore=['max_epochs'])
 
         # Makes envs in init already
         self.env = gym.vector.make(
