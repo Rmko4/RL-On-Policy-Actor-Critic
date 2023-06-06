@@ -8,12 +8,51 @@ from torch.distributions import Distribution, Normal
 
 from action_utils import scale_and_clip_actions, scale_actions
 
+class FeatureExtractor(nn.Module):
+    def __init__(self,
+                 state_size: int,
+                 hidden_size: int = 128,
+                 shared_extractor: bool = False) -> None:
+        super().__init__()
+        self.state_size = state_size
+        self.hidden_size = hidden_size
+
+        self.shared_extractor = shared_extractor
+
+        if self.shared_extractor:
+            self.feature_extractor = nn.Sequential(
+                nn.Linear(self.state_size, hidden_size),
+                nn.Tanh(),
+            )
+        else:
+            self.feature_extractor_v = nn.Sequential(
+                nn.Linear(self.state_size, hidden_size),
+                nn.Tanh(),
+            )
+            self.feature_extractor_pi = nn.Sequential(
+                nn.Linear(self.state_size, hidden_size),
+                nn.Tanh(),
+            )
+
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+        if self.shared_extractor:
+            features = self.feature_extractor(x)
+            return features, features
+        else:
+            features_v = self.feature_extractor_v(x)
+            features_pi = self.feature_extractor_pi(x)
+            return features_v, features_pi
+
+    
+
 
 class ActorCriticPolicy(nn.Module):
-    def __init__(self, state_space: spaces.Space,
+    def __init__(self,
+                 state_space: spaces.Space,
                  action_space: spaces.Space,
                  hidden_size: int = 128,
-                 init_std: float = 1.) -> None:
+                 init_std: float = 1.,
+                 shared_extractor: bool = False) -> None:
         super().__init__()
         self.state_space = state_space
         self.action_space = action_space
@@ -22,11 +61,12 @@ class ActorCriticPolicy(nn.Module):
         self.n_actions = action_space.shape[-1]
         self.hidden_size = hidden_size
 
+        self.shared_extractor = shared_extractor
+
         # Default shared feature extractor.
-        self.feature_extractor = nn.Sequential(
-            nn.Linear(self.state_size, hidden_size),
-            nn.Tanh(),
-        )
+        self.feature_extractor = FeatureExtractor(
+            self.state_size, hidden_size, shared_extractor=self.shared_extractor)
+        
 
         self.actor_head = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
@@ -55,7 +95,8 @@ class ActorCriticPolicy(nn.Module):
         # will be close to the zero policy (zero actions).
 
         module_gains = {
-            self.feature_extractor: 1.0,
+            # self.feature_extractor_v: 1.0,
+            # self.feature_extractor_pi: 1.0,
             self.actor_head: 0.01,
             self.critic_head: 1.0
         }
@@ -69,10 +110,10 @@ class ActorCriticPolicy(nn.Module):
             module.apply(lambda x: _init_weights(x, gain))
 
     def forward(self, x: Tensor) -> Tuple[Distribution, Tensor]:
-        features = self.feature_extractor(x)
+        features_v, features_pi = self.feature_extractor(x)
 
-        value = self.critic_head(features)
-        mu = self.actor_head(features)
+        value = self.critic_head(features_v)
+        mu = self.actor_head(features_pi)
         mu = scale_actions(mu, self.action_space)
 
         std = self.log_std.exp().expand_as(mu)
@@ -112,7 +153,7 @@ class ActorCriticPolicy(nn.Module):
         return action
 
     def predict_value(self, x: Tensor) -> Tensor:
-        features = self.feature_extractor(x)
+        features, _ = self.feature_extractor(x)
         value = self.critic_head(features)
         return value
 

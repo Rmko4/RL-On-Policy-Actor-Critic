@@ -11,6 +11,9 @@ def get_args():
                         help="Type of algorithm to use for training")
     parser.add_argument("--env_id", type=str, default="Ant-v4",
                         help="Id of the environment to train on")
+    parser.add_argument("--perform_testing", action="store_true",
+                        help="Whether to perform testing after training")
+
     
     parser.add_argument("--max_epochs", type=int, default=100,
                         help="Maximum number of steps to train for")
@@ -25,6 +28,8 @@ def get_args():
                         choices=["Adam", "RMSprop", "SGD"])
     parser.add_argument("--learning_rate", type=float, default=1e-3,
                         help="Learning rate for training")
+    parser.add_argument("--lr_decay", type=float, default=1.0,
+                        help="Learning rate decay for training")
     parser.add_argument("--weight_decay", type=float, default=0.,
                         help="Weight decay (L2 regularization) for training")
     parser.add_argument("--gamma", type=float, default=0.99,
@@ -42,6 +47,9 @@ def get_args():
     
     parser.add_argument("--hidden_size", type=int, default=128,
                         help="Hidden size for policy")
+    parser.add_argument("--shared_extractor", action="store_true",
+                        help="Whether to use a shared feature extractor for policy")
+
     
     parser.add_argument("--ppo_batch_size", type=int, default=None,
                         help="Batch size for PPO")

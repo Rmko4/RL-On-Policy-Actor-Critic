@@ -10,6 +10,7 @@ from pytorch_lightning import LightningModule
 from rollout import RolloutBufferDataset, RolloutAgent, RolloutSample
 from torch import Tensor, nn
 from torch.optim import SGD, Adam, Optimizer, RMSprop
+from torch.optim.lr_scheduler import ExponentialLR
 from torch.utils.data import DataLoader
 
 OPTIMIZERS: Dict[str, Type[torch.optim.Optimizer]] = {'Adam': Adam,
@@ -28,11 +29,13 @@ class PolicyGradientModule(LightningModule):
     def __init__(self,
                  env_id: str = 'Ant-v4',
                  algorithm: str = 'A2C',
+                 perform_testing: bool = False,
                  steps_per_epoch: int = 20,
                  num_envs: int = 8,
                  num_rollout_steps: int = 5,
                  optimizer: str = 'RMSProp',
                  learning_rate: float = 1e-3,
+                 lr_decay: float = 1.,
                  weight_decay: float = 0.,
                  value_coef: float = 0.5,
                  entropy_coef: float = 0.01,
@@ -40,6 +43,7 @@ class PolicyGradientModule(LightningModule):
                  gae_lambda: float = 1.,
                  init_std: float = 1.,
                  hidden_size: int = 128,
+                 shared_extractor: bool = False,
                  ppo_batch_size: int = 64,
                  ppo_epochs: int = 10,
                  ppo_clip_ratio: float = 0.2,
@@ -59,7 +63,8 @@ class PolicyGradientModule(LightningModule):
         self.policy = ActorCriticPolicy(state_space=self.state_space,
                                         action_space=self.action_space,
                                         hidden_size=hidden_size,
-                                        init_std=init_std)
+                                        init_std=init_std,
+                                        shared_extractor=shared_extractor)
 
         self.rollout_agent = RolloutAgent(self.env,
                                           self.policy,
@@ -187,9 +192,10 @@ class PolicyGradientModule(LightningModule):
         self.policy.update_device()
 
     def on_train_epoch_end(self) -> None:
-        self.policy.train(False)
-        self.test_epoch()
-        self.policy.train(True)
+        if self.hparams.perform_testing:
+            self.policy.train(False)
+            self.test_epoch()
+            self.policy.train(True)
 
     def test_epoch(self):
         env = gym.make(self.hparams.env_id, render_mode='human')
@@ -252,6 +258,9 @@ class PolicyGradientModule(LightningModule):
         return DataLoader(self.dataset, batch_size=self.batch_size)
 
     def configure_optimizers(self) -> Optimizer:
-        return OPTIMIZERS[self.hparams.optimizer](self.policy.parameters(),  # type: ignore
+        optim = OPTIMIZERS[self.hparams.optimizer](self.policy.parameters(),  # type: ignore
                                                   lr=self.hparams.learning_rate,
-                                                  weight_decay=self.hparams.weight_decay)  # type: ignore
+                                                  weight_decay=self.hparams.weight_decay,
+                                                  eps=1e-05)  # type: ignore
+        scheduler = ExponentialLR(optim, gamma=self.hparams.lr_decay)  # type: ignore
+        return [optim], [scheduler]

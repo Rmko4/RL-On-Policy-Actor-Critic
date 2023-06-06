@@ -5,6 +5,7 @@ from typing import List
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import CSVLogger, WandbLogger # type: ignore
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 from argparser import get_args
 from policy_gradient_module import PolicyGradientModule
@@ -26,7 +27,7 @@ def train(hparams, config=None): # type: ignore
     max_epochs = hparams.pop('max_epochs')
     gradient_clip_val = hparams.pop('max_grad_norm')
 
-    callbacks = []
+    callbacks = [LearningRateMonitor()]
 
     hparams = {**hparams, **config} if config else hparams
 
