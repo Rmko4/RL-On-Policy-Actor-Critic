@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from abc import ABC, abstractmethod
-from typing import NamedTuple, Tuple
+from typing import Callable, NamedTuple, Tuple
 
 import numpy as np
 import torch
@@ -33,7 +33,7 @@ class RolloutBuffer():
         self.buffer_size = buffer_size
         self.num_envs = num_envs
         self.buffer_shape = (buffer_size, num_envs)
-        self.batch_size = buffer_size * num_envs
+        self.out_size = buffer_size * num_envs
         self.state_space = state_space
         self.action_space = action_space
         self.gamma = gamma
@@ -87,7 +87,7 @@ class RolloutBuffer():
         for buffer_name in self.get_buffer_names:
             buffer: np.ndarray = self.__dict__[buffer_name]
             self.__dict__[buffer_name] = buffer.reshape(
-                self.batch_size, *buffer.shape[2:])
+                self.out_size, *buffer.shape[2:])
 
         self.finalized = True
 
@@ -144,7 +144,8 @@ class RolloutAgent():
                  policy: ActorCriticPolicy,
                  num_rollout_steps: int = 5,
                  gamma: float = 0.99,
-                 gae_lambda: float = 1.) -> None:
+                 gae_lambda: float = 1.,
+                 on_rollout_end_cb: Callable | None = None) -> None:
         self.env = env
         self.policy = policy
         self.num_rollout_steps = num_rollout_steps
@@ -158,6 +159,9 @@ class RolloutAgent():
             env.action_space.shape,
             gamma=gamma,
             gae_lambda=gae_lambda,)
+        
+        if on_rollout_end_cb is not None:
+            self.on_rollout_end = on_rollout_end_cb
 
     def prepare(self) -> None:
         self.last_state, _ = self.env.reset()
@@ -239,6 +243,10 @@ class RolloutAgent():
         self.policy.train(True)
 
         buffer.finalize(last_value)
+        self.on_rollout_end()
+
+    def on_rollout_end(self) -> None:
+        pass
 
 
 class RolloutBufferDataset(IterableDataset):

@@ -1,5 +1,5 @@
 import time
-from typing import Any, Callable, Dict, NamedTuple, Optional, Type
+from typing import Any, Callable, Dict, NamedTuple, Type
 
 import gymnasium as gym
 import numpy as np
@@ -65,7 +65,8 @@ class PolicyGradientModule(LightningModule):
                                           self.policy,
                                           num_rollout_steps=num_rollout_steps,
                                           gamma=gamma,
-                                          gae_lambda=gae_lambda)
+                                          gae_lambda=gae_lambda,
+                                          on_rollout_end_cb=self.rollout_cb)
 
         self.mse_loss = nn.MSELoss()
 
@@ -81,6 +82,7 @@ class PolicyGradientModule(LightningModule):
         self.step = step_fn_dict[algorithm]
 
         self.total_frames = 0
+        self.rewards = None
 
     def ppo_step(self, batch: RolloutSample) -> Losses:
         # PPO
@@ -163,8 +165,6 @@ class PolicyGradientModule(LightningModule):
     def training_step(self, batch: RolloutSample, batch_idx: int) -> Tensor:
         # Run for one rollout sample
         losses = self.step(batch)
-
-        self.total_frames += self.batch_size / self.n_epochs
         
         # Log metrics
         self.log('policy_loss', losses.policy_loss)
@@ -175,12 +175,9 @@ class PolicyGradientModule(LightningModule):
         self.log('std', self.policy.log_std[0].exp().item(), prog_bar=True)
         self.log('return', batch.return_.mean().item(), prog_bar=True)
 
-        ra = self.rollout_agent
-        if len(ra.episode_rewards) > 0:
-            rewards = np.array(ra.episode_rewards).mean()
-            self.log('rewards', rewards, prog_bar=True)
-            ra.episode_rewards = []
-            ra.episode_lengths = []
+        if self.rewards is not None:
+            self.log('rewards', self.rewards, prog_bar=True)
+            self.rewards = None # To avoid logging same rewards again
 
         return losses.loss
 
@@ -235,6 +232,17 @@ class PolicyGradientModule(LightningModule):
             # print("Episode:", episode + 1, "Total Reward:", total_reward)
 
         env.close()
+
+    def rollout_cb(self) -> Callable:
+        # Customises rollout behaviour by collecting and flushing rollout rewards
+        ra = self.rollout_agent
+        if len(ra.episode_rewards) > 0:
+            self.rewards = np.array(ra.episode_rewards).mean()
+            ra.episode_rewards = []
+            ra.episode_lengths = []
+
+        self.total_frames += ra.rollout_buffer.out_size
+        self.rollout_performed = False
 
     def train_dataloader(self) -> DataLoader:
         self.dataset = RolloutBufferDataset(
