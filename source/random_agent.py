@@ -4,10 +4,11 @@ import time
 import numpy as np
 
 # Set the environment ID
-env_id = 'InvertedPendulum-v4'
+# env_id = 'InvertedDoublePendulum-v4'
+env_id = 'HalfCheetah-v4'
 
 # Create the environment
-env = gym.make(env_id, render_mode='human')
+env = gym.make(env_id)
 
 # Reset the environment
 obs = env.reset()
@@ -16,7 +17,7 @@ obs = env.reset()
 # %%
 episode_rewards = []
 # Run a few episodes
-for episode in range(50):
+for episode in range(200):
     done = truncated = False
     total_reward = 0.
 
