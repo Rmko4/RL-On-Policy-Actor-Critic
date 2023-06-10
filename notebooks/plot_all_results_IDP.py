@@ -42,7 +42,7 @@ style.use(["cleanplot", "font_libertine"])
 
 # %%
 fig_width = 3.26
-fig_height = 4
+fig_height = 3
 
 # Set the window size for the moving average
 window_size = 50
