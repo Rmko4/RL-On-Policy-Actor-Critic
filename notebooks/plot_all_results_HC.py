@@ -35,7 +35,6 @@ grouped_data = df[col_names].groupby(
 frames = df["frame_count"].values
 
 
-
 # %%
 style.use(["cleanplot", "font_libertine"])
 
@@ -60,7 +59,6 @@ for alg_name, data in list(grouped_data.items())[0:4]:
     data = data[~nan_indices]
     frames_wo_nan = frames[~nan_indices]
 
-
     mu = np.mean(data, axis=1)
     sigma = np.std(data, axis=1)
 
@@ -73,9 +71,13 @@ for alg_name, data in list(grouped_data.items())[0:4]:
     plt.plot(frames_wo_nan, ma, label=alg_name, lw=1)
     plt.fill_between(frames_wo_nan, ma + 0.5*ma_sd, ma - 0.5*ma_sd, alpha=0.3)
 
-plt.xlabel("Test Epoch")
+plt.hlines(-300, frames[0], frames[-1],
+           linestyle='--', color='k', label="Random")
+
+plt.xlabel("Game step/frame")
 plt.ylabel("Average Reward")
 plt.legend()
-fig.savefig(results_dir/"HC_results_all.pdf", dpi=300, bbox_inches='tight')
+fig.savefig(results_dir/"HC_results_all.pdf",
+            dpi=300, bbox_inches='tight', pad_inches=0)
 plt.show()
 # %%

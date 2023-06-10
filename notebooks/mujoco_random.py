@@ -3,7 +3,7 @@ import gymnasium as gym
 import time
 
 # Set the environment ID
-env_id = 'Ant-v4'
+env_id = 'HalfCheetah-v4'
 
 # Create the environment
 env = gym.make(env_id, render_mode='human')
@@ -14,7 +14,7 @@ obs = env.reset()
 
 # %%
 # Run a few episodes
-for episode in range(5):
+for episode in range(100):
     done = truncated = False
     total_reward = 0.
 
