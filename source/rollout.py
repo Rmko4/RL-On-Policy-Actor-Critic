@@ -191,9 +191,6 @@ class RolloutAgent():
             action = action.cpu().numpy()
             value = value.cpu().numpy().flatten()
 
-            # TODO: Now we stored the clipped action.
-            # Log prob is not correct for these.
-
             clipped_action = action
             # Environment has boxed action space, so clip actions.
             if isinstance(self.env.action_space, spaces.Box):
