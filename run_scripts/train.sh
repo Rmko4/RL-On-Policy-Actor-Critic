@@ -7,8 +7,8 @@ python source/train_agent.py `
 --num_rollout_steps 128 `
 --max_epochs 200 `
 --steps_per_epoch 5 `
---learning_rate 0.0005 `
---lr_decay 0.992 `
+--learning_rate 0.0003 `
+--lr_decay 0.95 `
 --gamma 0.99 `
 --gae_lambda 0.95 `
 --value_coef 1.0 `
@@ -17,12 +17,8 @@ python source/train_agent.py `
 --hidden_size 512 `
 --ppo_batch_size 64 `
 --ppo_epochs 10 `
---ppo_clip_ratio 0.2 `
-
-
-
-
-
+--ppo_clip_ratio 0.1 `
+--log_video
 
 python source/train_agent.py `
 --env_id HalfCheetah-v4 `
@@ -43,8 +39,6 @@ python source/train_agent.py `
 --hidden_size 512 `
 --max_grad_norm 0.5 `
 --perform_testing
-
-# 4 rollout steps just doesnt work
 
 
 python source/train_agent.py `

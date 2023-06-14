@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #SBATCH --time=2:00:00
 #SBATCH --gpus-per-node=a100.20gb:1
+#SBATCH --cpus-per-task=8
 #SBATCH --job-name=RL-Catch
 #SBATCH --mem=200GB
 #SBATCH --profile=task
