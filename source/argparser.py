@@ -13,6 +13,8 @@ def get_args():
                         help="Id of the environment to train on")
     parser.add_argument("--perform_testing", action="store_true",
                         help="Whether to perform testing after training")
+    parser.add_argument("--log_video", action="store_true",
+                        help="Whether to log video of agent's performance")
 
     
     parser.add_argument("--max_epochs", type=int, default=100,

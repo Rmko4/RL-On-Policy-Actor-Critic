@@ -211,7 +211,6 @@ class PolicyGradientModule(LightningModule):
     def test_epoch(self):
         env = gym.make(self.hparams.env_id, render_mode='human')
 
-        # %%
         # Run a few episodes
         for episode in range(1):
             done = truncated = False
@@ -223,12 +222,11 @@ class PolicyGradientModule(LightningModule):
 
             while not done:
                 # time.sleep(0.01)
-                # Choose a random action
+                # Sample action
                 action = self.policy.act(state)
-                # Take action 0, as policy considers vectorized env.
                 action = action.cpu().numpy()
 
-                # # Environment has boxed action space, so clip actions.
+                # Environment has boxed action space, so clip actions.
                 if isinstance(env.action_space, spaces.Box):
                     clipped_action = np.clip(action, env.action_space.low,
                                              env.action_space.high)
