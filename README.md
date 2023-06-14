@@ -5,10 +5,11 @@ An implementation of the following on-policy actor-critic methods: Advantage Act
 
 ## Examples of Trained Agents
 ### InvertedDoublePendulum-v4 (PPO ~ 300k frames)
-<video src="https://github.com/Rmko4/RL-Policy-Gradients/raw/main/videos/InvertedDoublePendulum-v4-300k.mp4" controls title="Title"></video>
+https://github.com/Rmko4/RL-On-Policy-Actor-Critic/assets/55834815/98c274b2-2f57-4c5e-aa65-d1f6fed0b407
 
 ### HalfCheetah-v4 (PPO ~ 200k frames)
-<video src="https://github.com/Rmko4/RL-Policy-Gradients/raw/main/videos/HalfCheetah-v4-200k.mp4" controls title="Title"></video>
+https://github.com/Rmko4/RL-On-Policy-Actor-Critic/assets/55834815/0db50b56-2279-4e36-8461-7a65f91070ee
+
 
 ## Running the code
 ### Installation
