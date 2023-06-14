@@ -7,6 +7,9 @@ An implementation of the following on-policy actor-critic methods: Advantage Act
 ### InvertedDoublePendulum-v4 (PPO ~ 300k frames)
 <video src="../RL-Policy-Gradients/videos/InvertedDoublePendulum-v4-300k.mp4" controls title="Title"></video>
 
+### HalfCheetah-v4 (PPO ~ 200k frames)
+<video src="videos/HalfCheetah-v4-200k.mp4" controls title="Title"></video>
+
 ## Running the code
 ### Installation
 To install all dependencies, run the following command:
