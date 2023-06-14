@@ -51,7 +51,7 @@ python source/train_agent.py `
 --max_epochs 1000 `
 --steps_per_epoch 5 `
 --learning_rate 0.0005 `
---lr_decay 1.0 `
+--lr_decay 0.98 `
 --gamma 0.99 `
 --gae_lambda 0.95 `
 --value_coef 1.0 `
@@ -60,5 +60,6 @@ python source/train_agent.py `
 --hidden_size 512 `
 --ppo_batch_size 64 `
 --ppo_epochs 10 `
---ppo_clip_ratio 0.2 `
---ppo_clip_anneal
+--ppo_clip_ratio 0.1 `
+--ppo_clip_anneal `
+--log_video
